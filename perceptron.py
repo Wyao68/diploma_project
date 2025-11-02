@@ -19,7 +19,7 @@ class VectorOp(object):
         """
         # 首先把x[x1,x2,x3...]和y[y1,y2,y3,...]按元素相乘
         # 变成[x1*y1, x2*y2, x3*y3]
-        # 然后利用reduce求和
+        # 然后利用reduce求和（reduce只能接受一个列表作为输入）
         return reduce(lambda a, b: a + b, VectorOp.element_multiply(x, y), 0.0)
 
     @staticmethod
