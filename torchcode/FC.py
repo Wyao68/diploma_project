@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Subset
 
-import mnist_loader
+import data_loader
 
 
 # 定义全连接网络类，继承自 nn.Module(torch库的核心类，所有神经网络模型都应继承自它)
@@ -132,7 +132,7 @@ class FullyConnectedNet(nn.Module):
 
 if __name__ == '__main__':
     # 加载 MNIST 数据集
-    train_ds, val_ds, test_ds = mnist_loader.load_data_wrapper()
+    train_ds, val_ds, test_ds = data_loader.load_data_wrapper()
     
     net_dims = [784, 30, 10]  # 网络层维度列表
     model = FullyConnectedNet(net_dims)

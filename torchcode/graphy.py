@@ -3,7 +3,7 @@ import json
 import random
 
 # My library
-import mnist_loader
+import data_loader
 import FC
 
 # Third-party libraries
@@ -29,8 +29,8 @@ def main(filename, num_epochs,
 
                        
 def run_network(filename, num_epochs, training_set_size=1000):
-    training_data, validation_data, test_data = mnist_loader.load_data_wrapper() # 加载 MNIST 数据集
-    net = FC.FullyConnectedNet([784, 20, 20, 20, 10]) # 建立网络结构
+    training_data, validation_data, test_data = data_loader.load_data_wrapper() # 加载 MNIST 数据集
+    net = FC.FullyConnectedNet([784, 20, 20, 10]) # 建立网络结构
     
     test_cost, test_accuracy, training_cost, training_accuracy \
         = net.running(training_data, validation_data, training_data_size=training_set_size ,epochs=num_epochs, batch_size=500)
