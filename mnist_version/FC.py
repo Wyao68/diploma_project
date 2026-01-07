@@ -7,7 +7,6 @@ import data_loader
 
 
 # 定义全连接网络类，继承自 nn.Module(torch库的核心类，所有神经网络模型都应继承自它)
-# 最好浅层网络使用较小的dropout率，以免欠拟合，深层网络使用较大的dropout率，以防止过拟合（浅层学习的是数据的基础特征，深层学习的是数据的复杂特征）
 class FullyConnectedNet(nn.Module):
     def __init__(self, net_dims, dropout_p=0.4):
         super().__init__()
