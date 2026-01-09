@@ -17,3 +17,6 @@ env/
 # 系统文件
 .DS_Store
 Thumbs.db
+
+# 根目录下的 test[数字].py 文件
+test[0-9].py
