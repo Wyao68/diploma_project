@@ -18,5 +18,5 @@ env/
 .DS_Store
 Thumbs.db
 
-# 根目录下的 test[数字].py 文件
-test[0-9].py
+# 目录下所有以 test 开头的 .py 文件
+\test*.py
