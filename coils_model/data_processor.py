@@ -7,8 +7,7 @@
 - 将数据转换为 PyTorch 的 `TensorDataset`，并按比例划分为训练/验证/测试集
 
 示例用法：
-    train_ds, val_ds, test_ds, meta = data()
-
+    train_ds, val_ds, test_ds, meta = load_data()
 返回：
     train_ds, val_ds, test_ds : torch.utils.data.TensorDataset
     meta : dict 包含用于反归一化的统计信息（如 'x_mean', 'x_std'）以及原始数据

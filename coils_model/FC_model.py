@@ -1,3 +1,10 @@
+"""全连接神经网络基本模型
+
+主要功能：
+- 定义一个全连接神经网络类 FullyConnectedNet
+- 实现训练和验证流程，并保存训练好的模型参数
+"""
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -59,18 +66,18 @@ class FullyConnectedNet(nn.Module):
         返回：
         - tra_loss: 训练损失列表
         - val_Max_relevant_err: 测试集最大相关误差列表
-        - val_avg_relevant_err: 测试集平均相关误差列表        
+        - val_Avg_relevant_err: 测试集平均相关误差列表        
         - val_loss: 测试损失列表
         - tra_Max_relevant_err: 训练集最大相关误差列表
-        - tra_avg_relevant_err: 训练集平均相关误差列表
+        - tra_Avg_relevant_err: 训练集平均相关误差列表
         '''
         # 创建损失与误差列表
         training_loss = []
         val_Max_relevant_err = []
-        val_avg_relevant_err = [] 
+        val_Avg_relevant_err = [] 
         validate_loss = []
         tra_Max_relevant_err = []
-        tra_avg_relevant_err = []
+        tra_Avg_relevant_err = []
 
         # 数据加载
         n_train = min(training_data_size, len(train_ds))
@@ -136,7 +143,7 @@ class FullyConnectedNet(nn.Module):
             
             training_loss.append(tra_loss)
             tra_Max_relevant_err.append(tra_Max_rel_err)
-            tra_avg_relevant_err.append(tra_Avg_rel_err)
+            tra_Avg_relevant_err.append(tra_Avg_rel_err)
 
             # 在验证集上评估
             self.eval() # 验证模式
@@ -165,7 +172,7 @@ class FullyConnectedNet(nn.Module):
             
             validate_loss.append(val_loss)
             val_Max_relevant_err.append(val_Max_rel_err)
-            val_avg_relevant_err.append(val_Avg_rel_err)
+            val_Avg_relevant_err.append(val_Avg_rel_err)
 
             scheduler.step(val_Max_rel_err) # 根据验证集的结果调整学习率
 
@@ -175,9 +182,9 @@ class FullyConnectedNet(nn.Module):
                   f"Max_relevant_error: {val_Max_rel_err*100:.2f}%, Average_relevant_error: {val_Avg_rel_err*100:.2f}% - ")
 
         # 保存模型参数字典
-        torch.save(self.state_dict(), "fc_model_state_dict.pt")
+        torch.save(self.state_dict(), "saved_models\\coils_model_state_dict.pt")
 
-        return training_loss, val_Max_relevant_err, val_avg_relevant_err, validate_loss, tra_Max_relevant_err, tra_avg_relevant_err
+        return training_loss, val_Max_relevant_err, val_Avg_relevant_err, validate_loss, tra_Max_relevant_err, tra_Avg_relevant_err
 
 
 if __name__ == '__main__':
