@@ -3,7 +3,6 @@
 主要功能：
 - 定义一个全连接神经网络类 FullyConnectedNet
 - 实现训练和验证流程，并保存训练好的模型参数
-- 这里的相对误差考虑的是整个输出向量，而不是单个输出值的误差
 """
 
 import torch
@@ -65,11 +64,11 @@ class FullyConnectedNet(nn.Module):
         
         返回：
         - tra_loss: 训练损失列表
-        - val_Max_relevant_err: 测试集最大相关误差列表
-        - val_Avg_relevant_err: 测试集平均相关误差列表        
+        - val_Max_relevant_err: 测试集最大相对误差列表
+        - val_Avg_relevant_err: 测试集平均相对误差列表        
         - val_loss: 测试损失列表
-        - tra_Max_relevant_err: 训练集最大相关误差列表
-        - tra_Avg_relevant_err: 训练集平均相关误差列表
+        - tra_Max_relevant_err: 训练集最大相对误差列表
+        - tra_Avg_relevant_err: 训练集平均相对误差列表
         '''
         # 创建损失与误差列表
         training_loss = []
@@ -112,7 +111,7 @@ class FullyConnectedNet(nn.Module):
                         min_lr=1e-6,          # 最小学习率
                         )
         
-        # 训练与验证循环
+        # 训练与验证循环(这里的相对误差计算的都不对，要修改)
         for epoch in range(1, epochs + 1):
             self.train()
             
