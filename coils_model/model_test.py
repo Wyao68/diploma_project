@@ -1,10 +1,25 @@
 import os
+import random
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
 import data_processor, FC_model
+
+def set_random_seed(seed=33):
+    """设置所有随机种子，以确保结果可复现"""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    return seed
+
+RANDOM_SEED = set_random_seed()
 
 if __name__ == '__main__':
     state_path = "saved_models/coils_model_state_dict.pt"
@@ -14,7 +29,7 @@ if __name__ == '__main__':
     if not os.path.exists(state_path):
         raise FileNotFoundError(f"Model file not found: {state_path}")
     
-    train_ds, val_ds, test_ds, meta = data_processor.load_data(val_ratio=0.0, test_ratio=0.0)
+    train_ds, val_ds, test_ds, meta = data_processor.load_data(val_ratio=0.3, test_ratio=0.0, random_seed=RANDOM_SEED)
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
@@ -23,7 +38,7 @@ if __name__ == '__main__':
     model.to(device)
     model.eval()
     
-    loader = DataLoader(train_ds, batch_size=batch_size, shuffle=False)
+    loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
     
     L_per_sample_errs = []
     R_per_sample_errs = []

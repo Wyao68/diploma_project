@@ -16,16 +16,16 @@ import numpy as np
                 
 # 绘图函数(包含多个子图)
 def plot_training_progress(training_loss,
-                           val_L_Max_relevant_errs, 
-                           val_L_Avg_relevant_errs, 
-                           val_R_Max_relevant_errs, 
-                           val_R_Avg_relevant_errs, 
-                           validate_loss, 
-                           tra_L_Max_relevant_errs, 
-                           tra_L_Avg_relevant_errs, 
-                           tra_R_Max_relevant_errs, 
-                           tra_R_Avg_relevant_errs,
-                           x_min=50):
+                            val_L_Max_relevant_errs, 
+                            val_L_Avg_relevant_errs, 
+                            val_R_Max_relevant_errs, 
+                            val_R_Avg_relevant_errs, 
+                            validate_loss, 
+                            tra_L_Max_relevant_errs, 
+                            tra_L_Avg_relevant_errs, 
+                            tra_R_Max_relevant_errs, 
+                            tra_R_Avg_relevant_errs,
+                            x_min=50):
     
     fig = plt.figure(figsize=(12, 9))
     
@@ -81,13 +81,21 @@ def plot_training_progress(training_loss,
     ax6 = fig.add_subplot(236)
     ax6.plot(np.arange(x_min, len(val_L_Avg_relevant_errs)), 
         list(map(lambda x: x*100, val_L_Avg_relevant_errs[x_min:len(val_L_Avg_relevant_errs)])),
-        color="#1EFF008E",
-        label='validation data')
+        color="#1EFF00FF",
+        label='L on validation data')
     ax6.plot(np.arange(x_min, len(tra_L_Avg_relevant_errs)), 
         list(map(lambda x: x*100, tra_L_Avg_relevant_errs[x_min:len(tra_L_Avg_relevant_errs)])),
         color="#FFAF03",
-        label='training data')
-    ax6.set_xlim([x_min, len(tra_L_Avg_relevant_errs)])
+        label='L on training data')
+    ax6.plot(np.arange(x_min, len(val_R_Avg_relevant_errs)), 
+        list(map(lambda x: x*100, val_R_Avg_relevant_errs[x_min:len(val_R_Avg_relevant_errs)])),
+        color="#1EFF0062",
+        label='R on validation data')
+    ax6.plot(np.arange(x_min, len(tra_R_Avg_relevant_errs)), 
+        list(map(lambda x: x*100, tra_R_Avg_relevant_errs[x_min:len(tra_R_Avg_relevant_errs)])),
+        color="#FFAF036D",
+        label='R on training data')
+    ax6.set_xlim([x_min, len(tra_R_Avg_relevant_errs)])
     ax6.grid(True)
     ax6.set_xlabel('Epoch')
     ax6.set_ylabel('Average Relevant Error (%)')
@@ -113,6 +121,6 @@ if __name__ == "__main__":
                             tra_L_Avg_relevant_errs,
                             tra_R_Max_relevant_errs,
                             tra_R_Avg_relevant_errs,
-                            x_min=50)  # 从第50轮开始绘图
+                            x_min=0)  
     
     print("Training progress plots generated successfully.")
