@@ -4,13 +4,14 @@
 - 定义一个全连接神经网络类 FullyConnectedNet
 - 实现训练和验证流程，并保存训练好的模型参数
 """
-
+# Standard library
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Subset
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
+# My library
 import data_processor
 
 
@@ -51,7 +52,7 @@ class FullyConnectedNet(nn.Module):
                 val_ds: torch.utils.data.Dataset, 
                 training_data_size: int = 1000,
                 epochs: int = 30, 
-                batch_size: int = 20) -> tuple[list, list, list, list, list, list]:
+                batch_size: int = 20) -> tuple[list, list, list, list, list, list, list, list, list, list]:
         '''
         执行训练过程并返回相关信息以便训练过程可视化
         
@@ -64,19 +65,27 @@ class FullyConnectedNet(nn.Module):
         
         返回：
         - tra_loss: 训练损失列表
-        - val_Max_relevant_err: 测试集最大相对误差列表
-        - val_Avg_relevant_err: 测试集平均相对误差列表        
+        - val_L_Max_relevant_errs: 测试集电感最大相对误差列表
+        - val_L_Avg_relevant_errs: 测试集电感平均相对误差列表 
+        - val_R_Max_relevant_errs: 测试集电阻最大相对误差列表
+        - val_R_Avg_relevant_errs: 测试集电阻平均相对误差列表       
         - val_loss: 测试损失列表
-        - tra_Max_relevant_err: 训练集最大相对误差列表
-        - tra_Avg_relevant_err: 训练集平均相对误差列表
+        - tra_L_Max_relevant_errs: 训练集电感最大相对误差列表
+        - tra_L_Avg_relevant_errs: 训练集电感平均相对误差列表
+        - tra_R_Max_relevant_errs: 训练集电阻最大相对误差列表
+        - tra_R_Avg_relevant_errs: 训练集电阻平均相对误差列表
         '''
         # 创建损失与误差列表
         training_loss = []
-        val_Max_relevant_err = []
-        val_Avg_relevant_err = [] 
+        val_L_Max_relevant_errs = []
+        val_L_Avg_relevant_errs = [] 
+        val_R_Max_relevant_errs = []
+        val_R_Avg_relevant_errs = []
         validate_loss = []
-        tra_Max_relevant_err = []
-        tra_Avg_relevant_err = []
+        tra_L_Max_relevant_errs = []
+        tra_L_Avg_relevant_errs = []
+        tra_R_Max_relevant_errs = []
+        tra_R_Avg_relevant_errs = []
 
         # 数据加载
         n_train = min(training_data_size, len(train_ds))
@@ -111,17 +120,11 @@ class FullyConnectedNet(nn.Module):
                         min_lr=1e-6,          # 最小学习率
                         )
         
-        # 训练与验证循环(这里的相对误差计算的都不对，要修改)
+        # 训练与验证循环
         for epoch in range(1, epochs + 1):
             self.train()
             
-            tra_loss = 0.0 
-            tra_Max_rel_err = 0.0 
-            tra_Avg_rel_err = 0.0 
-            tra_total = 0 
-            
             for batch_x, batch_y in train_loader:
-                # 将数据也转移到与模型所在的设备上
                 batch_x = batch_x.to(device) 
                 batch_y = batch_y.to(device)
 
@@ -131,32 +134,56 @@ class FullyConnectedNet(nn.Module):
                 t_loss.backward()                    # 反向传播
                 optimizer.step()                     # 参数更新
 
-                tra_loss += t_loss.item() * batch_x.size(0) # item将单个元素的tensor转化为Python的基础数据格式
-                # 每个样本每个维度的相对误差，形状 [batch_size, output_dim]
-                t_rel_err = (outputs - batch_y).abs() / batch_y.abs()
-                # 对每个样本沿输出维度求平均，得到形状 [batch_size]
-                t_per_sample_rel = t_rel_err.mean(dim=1)
-                tra_Max_rel_err = max(tra_Max_rel_err, t_per_sample_rel.max().item())
-                # 累加每个样本的平均相对误差用于计算 epoch 平均
-                tra_Avg_rel_err += t_per_sample_rel.sum().item()
-                tra_total += batch_x.size(0)
-
-            tra_loss = tra_loss / tra_total
-            tra_Avg_rel_err = tra_Avg_rel_err / tra_total
+            # 在分别在训练集和验证集上评估这一轮的表现
+            self.eval()
             
-            training_loss.append(tra_loss)
-            tra_Max_relevant_err.append(tra_Max_rel_err)
-            tra_Avg_relevant_err.append(tra_Avg_rel_err)
-
-            # 在验证集上评估
-            self.eval() # 验证模式
+            tra_loss = 0.0 
+            tra_L_Max_rel_err = 0.0 
+            tra_L_Avg_rel_err = 0.0 
+            tra_R_Max_rel_err = 0.0 
+            tra_R_Avg_rel_err = 0.0 
+            tra_total = 0 
             
             val_loss = 0.0 
-            val_Max_rel_err = 0.0 
-            val_Avg_rel_err = 0.0 
+            val_L_Max_rel_err = 0.0 
+            val_L_Avg_rel_err = 0.0 
+            val_R_Max_rel_err = 0.0 
+            val_R_Avg_rel_err = 0.0
             val_total = 0 
             
-            with torch.no_grad(): # 禁用梯度计算，用于推理和评估阶段，以节省内存和计算资源
+            with torch.no_grad(): # 禁用梯度计算，以节省内存和计算资源
+                for tx, ty in train_loader:
+                    tx = tx.to(device) 
+                    ty = ty.to(device)
+
+                    t_outputs = self(tx)
+                    t_loss = criterion(t_outputs, ty)
+                    tra_loss += t_loss.item() * tx.size(0) 
+                    # 每个样本每个维度的相对误差，形状 [batch_size, output_dim]
+                    t_rel_err = (t_outputs - ty).abs() / ty.abs()
+
+                    t_L_rel_err = t_rel_err[:, 0] # 电感相对误差
+                    t_R_rel_err = t_rel_err[:, 1] # 电阻相对误差
+                    
+                    tra_L_Max_rel_err = max(tra_L_Max_rel_err, t_L_rel_err.max().item())
+                    tra_R_Max_rel_err = max(tra_R_Max_rel_err, t_R_rel_err.max().item())
+
+                    tra_L_Avg_rel_err += t_L_rel_err.sum().item()
+                    tra_R_Avg_rel_err += t_R_rel_err.sum().item()
+                    
+                    tra_total += tx.size(0)
+
+                tra_loss = tra_loss / tra_total 
+                tra_L_Avg_rel_err = tra_L_Avg_rel_err / tra_total 
+                tra_R_Avg_rel_err = tra_R_Avg_rel_err / tra_total 
+                
+                training_loss.append(tra_loss)
+                tra_L_Max_relevant_errs.append(tra_L_Max_rel_err)
+                tra_R_Max_relevant_errs.append(tra_R_Max_rel_err)
+                tra_L_Avg_relevant_errs.append(tra_L_Avg_rel_err)
+                tra_R_Avg_relevant_errs.append(tra_R_Avg_rel_err)
+
+            with torch.no_grad():
                 for vx, vy in val_loader:
                     vx = vx.to(device)
                     vy = vy.to(device)
@@ -166,29 +193,40 @@ class FullyConnectedNet(nn.Module):
 
                     val_loss += v_loss.item() * vx.size(0)
                     v_rel_err = (v_outputs - vy).abs() / vy.abs()
-                    v_per_sample_rel = v_rel_err.mean(dim=1)
-                    val_Max_rel_err = max(val_Max_rel_err, v_per_sample_rel.max().item())
-                    val_Avg_rel_err += v_per_sample_rel.sum().item()
-                    val_total += vx.size(0)
+                    v_L_rel_err = v_rel_err[:, 0]
+                    v_R_rel_err = v_rel_err[:, 1]
+
+                    val_L_Max_rel_err = max(val_L_Max_rel_err, v_L_rel_err.max().item())
+                    val_R_Max_rel_err = max(val_R_Max_rel_err, v_R_rel_err.max().item())
+
+                    val_L_Avg_rel_err += v_L_rel_err.sum().item()
+                    val_R_Avg_rel_err += v_R_rel_err.sum().item()
                     
-            val_loss = val_loss / val_total                    
-            val_Avg_rel_err = val_Avg_rel_err / val_total
-            
-            validate_loss.append(val_loss)
-            val_Max_relevant_err.append(val_Max_rel_err)
-            val_Avg_relevant_err.append(val_Avg_rel_err)
+                    val_total += vx.size(0)
+
+                val_loss = val_loss / val_total 
+                val_L_Avg_rel_err = val_L_Avg_rel_err / val_total 
+                val_R_Avg_rel_err = val_R_Avg_rel_err / val_total 
+                
+                validate_loss.append(val_loss)
+                val_L_Max_relevant_errs.append(val_L_Max_rel_err)
+                val_R_Max_relevant_errs.append(val_R_Max_rel_err)
+                val_L_Avg_relevant_errs.append(val_L_Avg_rel_err)
+                val_R_Avg_relevant_errs.append(val_R_Avg_rel_err)
 
             scheduler.step(val_loss) # 根据验证集的结果调整学习率
 
-            # 打印本轮训练与验证结果
+            # 打印本轮训练结果
             print(f"Epoch {epoch:02d} - "
-                  f"Training Loss: {tra_loss:.4f}, "
-                  f"Max_relevant_error: {val_Max_rel_err*100:.2f}%, Average_relevant_error: {val_Avg_rel_err*100:.2f}% - ")
+                  f"Training Loss: {tra_loss:.4f}, ")
 
         # 保存模型参数字典
         torch.save(self.state_dict(), "saved_models\\coils_model_state_dict.pt")
 
-        return training_loss, val_Max_relevant_err, val_Avg_relevant_err, validate_loss, tra_Max_relevant_err, tra_Avg_relevant_err
+        return training_loss, \
+               val_L_Max_relevant_errs, val_L_Avg_relevant_errs, val_R_Max_relevant_errs, val_R_Avg_relevant_errs, \
+               validate_loss, \
+               tra_L_Max_relevant_errs, tra_L_Avg_relevant_errs, tra_R_Max_relevant_errs, tra_R_Avg_relevant_errs
 
 
 if __name__ == '__main__':
