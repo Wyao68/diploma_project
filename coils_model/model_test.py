@@ -44,26 +44,40 @@ if __name__ == '__main__':
 
     fig = plt.figure(figsize=(12, 9))
     
-    # 分别绘制电感和电阻的预测误差
+    # 绘制电感的误差竖线图
     ax1 = fig.add_subplot(211)
-    ax1.plot(np.arange(0, len(L_per_sample_errs)), 
-        list(map(lambda x: x*100, L_per_sample_errs)),
-        color="#0A14DA")
+    # 使用vlines绘制竖线：x位置，y起点，y终点
+    ax1.vlines(np.arange(0, len(L_per_sample_errs)), 
+            ymin=0, 
+            ymax=list(map(lambda x: x*100, L_per_sample_errs)),
+            color="#0A14DA", 
+            linewidth=1.5)
     ax1.set_xlim([0, len(L_per_sample_errs)])
-    ax1.grid(True)
-    ax1.set_xlabel('sample index')
-    ax1.set_ylabel('Relevant Error (%)')
-    ax1.set_title("Model's Relevant Error on Inductance (L) Prediction")
+    ax1.grid(True, alpha=0.3)
+    ax1.set_xlabel('Sample Index')
+    ax1.set_ylabel('Relative Error (%)')
+    ax1.set_title("Model's Relative Error on Inductance (L) Prediction")
+    # 统计信息
+    ax1.axhline(y=np.mean(L_per_sample_errs)*100, color='green', linestyle='--', 
+            label=f'Mean: {np.mean(L_per_sample_errs)*100:.2f}%')
+    ax1.legend()
 
+    # 绘制电阻的误差竖线图
     ax2 = fig.add_subplot(212)
-    ax2.plot(np.arange(0, len(R_per_sample_errs)), 
-        list(map(lambda x: x*100, R_per_sample_errs)),
-        color="#DA0A0A")
+    ax2.vlines(np.arange(0, len(R_per_sample_errs)), 
+            ymin=0, 
+            ymax=list(map(lambda x: x*100, R_per_sample_errs)),
+            color="#DA0A0A", 
+            linewidth=1.5)
     ax2.set_xlim([0, len(R_per_sample_errs)])
-    ax2.grid(True)
-    ax2.set_xlabel('sample index')
-    ax2.set_ylabel('Relevant Error (%)')
-    ax2.set_title("Model's Relevant Error on Resistance (R) Prediction")
+    ax2.grid(True, alpha=0.3)
+    ax2.set_xlabel('Sample Index')
+    ax2.set_ylabel('Relative Error (%)')
+    ax2.set_title("Model's Relative Error on Resistance (R) Prediction")
+    # 统计信息
+    ax2.axhline(y=np.mean(R_per_sample_errs)*100, color='green', linestyle='--',
+            label=f'Mean: {np.mean(R_per_sample_errs)*100:.2f}%')
+    ax2.legend()
 
     plt.tight_layout()
     plt.show()
