@@ -3,6 +3,7 @@
 主要功能：
 - 定义一个全连接神经网络类 FullyConnectedNet
 - 实现训练和验证流程，并保存训练好的模型参数
+- 这里的相对误差考虑的是整个输出向量，而不是单个输出值的误差
 """
 
 import torch
@@ -14,7 +15,6 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 import data_processor
 
 
-# 定义全连接网络类，继承自 nn.Module(torch库的核心类，所有神经网络模型都应继承自它)
 class FullyConnectedNet(nn.Module):
     def __init__(self, net_dims, dropout_p=0.0):
         super().__init__()
@@ -133,9 +133,13 @@ class FullyConnectedNet(nn.Module):
                 optimizer.step()                     # 参数更新
 
                 tra_loss += t_loss.item() * batch_x.size(0) # item将单个元素的tensor转化为Python的基础数据格式
-                err = outputs - batch_y
-                tra_Max_rel_err = max(tra_Max_rel_err, err.abs().max().item())
-                tra_Avg_rel_err += err.abs().sum().item()
+                # 每个样本每个维度的相对误差，形状 [batch_size, output_dim]
+                t_rel_err = (outputs - batch_y).abs() / batch_y.abs()
+                # 对每个样本沿输出维度求平均，得到形状 [batch_size]
+                t_per_sample_rel = t_rel_err.mean(dim=1)
+                tra_Max_rel_err = max(tra_Max_rel_err, t_per_sample_rel.max().item())
+                # 累加每个样本的平均相对误差用于计算 epoch 平均
+                tra_Avg_rel_err += t_per_sample_rel.sum().item()
                 tra_total += batch_x.size(0)
 
             tra_loss = tra_loss / tra_total
@@ -161,10 +165,11 @@ class FullyConnectedNet(nn.Module):
                     v_outputs = self(vx)
                     v_loss = criterion(v_outputs, vy)
 
-                    val_loss += v_loss.item() * vx.size(0)                  
-                    err = v_outputs - vy
-                    val_Max_rel_err = max(val_Max_rel_err, err.abs().max().item())
-                    val_Avg_rel_err += err.abs().sum().item()
+                    val_loss += v_loss.item() * vx.size(0)
+                    v_rel_err = (v_outputs - vy).abs() / vy.abs()
+                    v_per_sample_rel = v_rel_err.mean(dim=1)
+                    val_Max_rel_err = max(val_Max_rel_err, v_per_sample_rel.max().item())
+                    val_Avg_rel_err += v_per_sample_rel.sum().item()
                     val_total += vx.size(0)
                     
             val_loss = val_loss / val_total                    
@@ -174,11 +179,11 @@ class FullyConnectedNet(nn.Module):
             val_Max_relevant_err.append(val_Max_rel_err)
             val_Avg_relevant_err.append(val_Avg_rel_err)
 
-            scheduler.step(val_Max_rel_err) # 根据验证集的结果调整学习率
+            scheduler.step(val_loss) # 根据验证集的结果调整学习率
 
             # 打印本轮训练与验证结果
             print(f"Epoch {epoch:02d} - "
-                  f"Training Loss: {tra_loss:.2f}, "
+                  f"Training Loss: {tra_loss:.4f}, "
                   f"Max_relevant_error: {val_Max_rel_err*100:.2f}%, Average_relevant_error: {val_Avg_rel_err*100:.2f}% - ")
 
         # 保存模型参数字典

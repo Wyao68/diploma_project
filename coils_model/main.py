@@ -14,7 +14,7 @@ import torch
 import random
 import numpy as np
 
-def set_random_seed(seed=42):
+def set_random_seed(seed=33):
     """设置所有随机种子，以确保结果可复现"""
     random.seed(seed)
     np.random.seed(seed)
@@ -26,13 +26,13 @@ def set_random_seed(seed=42):
         torch.backends.cudnn.benchmark = False
     return seed
 
-RANDOM_SEED = set_random_seed(42)
+RANDOM_SEED = set_random_seed()
 
 if __name__ == "__main__":
     num_epochs = 100 # 训练轮数
     
-    training_data, validation_data, test_data, meta = data_processor.load_data()
-    net = FC_model.FullyConnectedNet([6, 32, 64, 64, 32, 2]) 
+    training_data, validation_data, test_data, meta = data_processor.load_data(val_ratio = 0.3, test_ratio = 0.0, random_seed = RANDOM_SEED)
+    net = FC_model.FullyConnectedNet([6, 32, 64, 64, 32, 2], dropout_p=0.0) 
     
     training_loss, val_Max_relevant_err, val_Avg_relevant_err, validate_loss, tra_Max_relevant_err, tra_Avg_relevant_err \
         = net.running(training_data, validation_data, training_data_size=4000 ,epochs=num_epochs, batch_size=64)
