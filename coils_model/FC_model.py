@@ -16,7 +16,7 @@ import data_processor
 
 # 定义全连接网络类，继承自 nn.Module(torch库的核心类，所有神经网络模型都应继承自它)
 class FullyConnectedNet(nn.Module):
-    def __init__(self, net_dims, dropout_p=0.4):
+    def __init__(self, net_dims, dropout_p=0.0):
         super().__init__()
         self.dropout_p = dropout_p
         layers = []
@@ -188,6 +188,7 @@ class FullyConnectedNet(nn.Module):
 
 
 if __name__ == '__main__':
+    # 作为脚本执行时进行简单测试
     # 加载数据集
     train_ds, val_ds, test_ds, meta = data_processor.load_data()
     

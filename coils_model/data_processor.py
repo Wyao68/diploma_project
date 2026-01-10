@@ -74,22 +74,19 @@ def load_data(path: str | None = None,
         if len(set(cols)) != 1:
             raise ValueError(f"CSV files in directory have inconsistent column counts: {cols}")
 
-        data = np.vstack(parts) # 将所有部分沿行方向合并
+        data = np.vstack(parts) 
         meta: dict = {'raw_data': data} # 创建meta，保存原始数据以备后用
         print(f"Loaded {len(parts)} CSV files, total shape: {data.shape}")
 
-    # 将前 input_cols 列作为输入 X，最后 output_cols 列作为目标 Y，并将数据类型转换为 float32，以匹配 PyTorch 的默认精度并减少内存占用
+    # 将数据类型转换为 float32，以匹配 PyTorch 的默认精度
     X = data[:, :input_cols].astype(np.float32)
     Y = data[:, -output_cols:-1].astype(np.float32)
 
-    # 对输入特征进行标准化（这一过程中会因浮点数而产生误差，引入噪声）
+    # 对输入特征进行归一化
     if normalize:
-        # 计算每个特征的均值与标准差，keepdims=True 保持二维形状以便执行标准化时广播
         x_mean = X.mean(axis=0, keepdims=True)
         x_std = X.std(axis=0, keepdims=True)
-        # 若某一列方差为 0，则将其设为 1，以避免除零错误，表明该列是常数，标准化后全为 0
-        x_std[x_std == 0.0] = 1.0
-        # 执行标准化
+        x_std[x_std == 0.0] = 1.0 # 防止除以零
         X = (X - x_mean) / x_std
         # 将统计量保存到 meta 以供反归一化或在部署时使用
         meta['x_mean'] = x_mean
@@ -102,7 +99,7 @@ def load_data(path: str | None = None,
     # 构造 dataset
     dataset = TensorDataset(X_t, Y_t)
 
-    # 数据集划分：先对索引进行打乱（shuffle），然后根据指定比例切分为 train/val/test
+    # 数据集划分
     n = len(dataset)  # 总样本数
     rng = np.random.RandomState(random_seed)  # 使用 numpy 的 RandomState（随机数生成器） 以保证可复现
     indices = np.arange(n)  # 生成所有样本索引
@@ -133,14 +130,12 @@ def load_data(path: str | None = None,
     val_ds = subset_from_indices(dataset, val_idx) if len(val_idx) > 0 else TensorDataset(torch.empty(0), torch.empty(0))
     test_ds = subset_from_indices(dataset, test_idx) if len(test_idx) > 0 else TensorDataset(torch.empty(0), torch.empty(0))
 
-    # 返回划分好的数据集以及元信息（用于反归一化或记录）
     return train_ds, val_ds, test_ds, meta
 
 
 if __name__ == '__main__':
     # 当作为脚本执行时，运行一个简单的自检：尝试加载文件并打印出数据集信息
     try:
-        # 使用默认参数加载数据
         train_ds, val_ds, test_ds, meta = load_data()
         # 打印每个子集样本数，帮助确认划分是否正确
         print(f"  train: {len(train_ds)} samples")
@@ -150,5 +145,5 @@ if __name__ == '__main__':
         print("Input shape:", train_ds[0][0].shape if len(train_ds) else None)
         print("Output shape:", train_ds[0][1].shape if len(train_ds) else None)
     except Exception as e:
-        # 捕获并打印任何异常，便于定位问题（例如文件不存在或解析错误）
+        # 捕获并打印任何异常
         print("Self-test failed:", e)

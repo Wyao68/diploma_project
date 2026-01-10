@@ -9,10 +9,6 @@
 # Standard library
 import json
 
-# My library
-import data_processor
-import FC_model
-
 # Third-party libraries
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,7 +23,7 @@ def plot_training_progress(training_loss,
                            num_epochs,
                            x_min=50):
     
-    fig = plt.figure(figsize=(12, 8))
+    fig = plt.figure(figsize=(12, 9))
     
     ax1 = fig.add_subplot(231)
     ax1.plot(np.arange(x_min, num_epochs), 
@@ -36,7 +32,7 @@ def plot_training_progress(training_loss,
     ax1.set_xlim([x_min, num_epochs])
     ax1.grid(True)
     ax1.set_xlabel('Epoch')
-    ax1.set_title('Loss on the training data')
+    ax1.set_title('Loss on training data')
 
     ax2 = fig.add_subplot(232)
     ax2.plot(np.arange(x_min, num_epochs), 
@@ -45,7 +41,8 @@ def plot_training_progress(training_loss,
     ax2.set_xlim([x_min, num_epochs])
     ax2.grid(True)
     ax2.set_xlabel('Epoch')
-    ax2.set_title('Max Relevant Error on the validation data')
+    ax2.set_ylabel('Max Relevant Error (%)')
+    ax2.set_title('Max Relevant Error on validation data')
 
     ax3 = fig.add_subplot(233)
     ax3.plot(np.arange(x_min, num_epochs), 
@@ -54,7 +51,8 @@ def plot_training_progress(training_loss,
     ax3.set_xlim([x_min, num_epochs])
     ax3.grid(True)
     ax3.set_xlabel('Epoch')
-    ax3.set_title('Average Relevant Error on the validation data')
+    ax3.set_ylabel('Average Relevant Error (%)')
+    ax3.set_title('Average Relevant Error on validation data')
 
     ax4 = fig.add_subplot(234)
     ax4.plot(np.arange(x_min, num_epochs), 
@@ -109,20 +107,9 @@ def plot_training_progress(training_loss,
 
 
 if __name__ == "__main__":
-    num_epochs = 100 # 训练轮数
-    
-    training_data, validation_data, test_data, meta = data_processor.load_data()
-    net = FC_model.FullyConnectedNet([6, 32, 64, 64, 32, 2]) 
-    
-    training_loss, val_Max_relevant_err, val_Avg_relevant_err, validate_loss, tra_Max_relevant_err, tra_Avg_relevant_err \
-        = net.running(training_data, validation_data, training_data_size=4000 ,epochs=num_epochs, batch_size=64)
-
-    with open("saved_models\\training_progress.json", "w") as f:
-        json.dump([training_loss, val_Max_relevant_err, val_Avg_relevant_err, validate_loss, tra_Max_relevant_err, tra_Avg_relevant_err], f)
-    
     # 读取保存的训练/评估结果并生成图表
     with open("saved_models\\training_progress.json", "r") as f:
-        training_loss, val_Max_relevant_err, val_Avg_relevant_err, validate_loss, tra_Max_relevant_err, tra_Avg_relevant_err = json.load(f)
+        training_loss, val_Max_relevant_err, val_Avg_relevant_err, validate_loss, tra_Max_relevant_err, tra_Avg_relevant_err, num_epochs = json.load(f)
 
     plot_training_progress(training_loss, 
                            val_Max_relevant_err, 
