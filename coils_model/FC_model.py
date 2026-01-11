@@ -5,6 +5,7 @@
 - 实现训练和验证流程，并保存训练好的模型参数
 """
 # Standard library
+import json
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -52,9 +53,9 @@ class FullyConnectedNet(nn.Module):
                 val_ds: torch.utils.data.Dataset, 
                 training_data_size: int = 1000,
                 epochs: int = 30, 
-                batch_size: int = 20) -> tuple[list, list, list, list, list, list, list, list, list, list]:
+                batch_size: int = 20):
         '''
-        执行训练过程并返回相关信息以便训练过程可视化
+        执行训练过程并保存训练过程信息以便可视化
         
         参数说明：
         - train_ds: 训练集
@@ -63,7 +64,7 @@ class FullyConnectedNet(nn.Module):
         - epochs: 训练轮次
         - batch_size: 批次大小
         
-        返回：
+        保存信息：
         - tra_loss: 训练损失列表
         - val_L_Max_relevant_errs: 测试集电感最大相对误差列表
         - val_L_Avg_relevant_errs: 测试集电感平均相对误差列表 
@@ -222,11 +223,15 @@ class FullyConnectedNet(nn.Module):
 
         # 保存模型参数字典
         torch.save(self.state_dict(), "saved_models\\coils_model_state_dict.pt")
-
-        return training_loss, \
-               val_L_Max_relevant_errs, val_L_Avg_relevant_errs, val_R_Max_relevant_errs, val_R_Avg_relevant_errs, \
-               validate_loss, \
-               tra_L_Max_relevant_errs, tra_L_Avg_relevant_errs, tra_R_Max_relevant_errs, tra_R_Avg_relevant_errs
+        
+            # 保存训练过程数据以供可视化
+        with open("saved_models\\training_progress.json", "w") as f:
+            json.dump([training_loss, \
+                        val_L_Max_relevant_errs, val_L_Avg_relevant_errs, \
+                        val_R_Max_relevant_errs, val_R_Avg_relevant_errs, \
+                        validate_loss, \
+                        tra_L_Max_relevant_errs, tra_L_Avg_relevant_errs, \
+                        tra_R_Max_relevant_errs, tra_R_Avg_relevant_errs,], f)
 
 
 if __name__ == '__main__':

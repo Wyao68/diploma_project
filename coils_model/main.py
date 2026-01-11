@@ -29,29 +29,9 @@ def set_random_seed(seed=33):
 RANDOM_SEED = set_random_seed()
 
 if __name__ == "__main__":
-    num_epochs = 100 # 训练轮数
-    
     training_data, validation_data, test_data, meta = data_processor.load_data(val_ratio = 0.3, test_ratio = 0.0, random_seed = RANDOM_SEED)
     net = FC_model.FullyConnectedNet([6, 32, 64, 64, 32, 2], dropout_p=0.0) 
     
-    training_loss, \
-        val_L_Max_relevant_errs, val_L_Avg_relevant_errs, \
-        val_R_Max_relevant_errs, val_R_Avg_relevant_errs, \
-    validate_loss, \
-        tra_L_Max_relevant_errs, tra_L_Avg_relevant_errs, \
-        tra_R_Max_relevant_errs, tra_R_Avg_relevant_errs \
-        = net.running(training_data, validation_data, training_data_size=4000 ,epochs=num_epochs, batch_size=64)
+    net.running(training_data, validation_data, training_data_size=4000 ,epochs=100, batch_size=64)
 
-    # 保存训练过程数据以供可视化
-    with open("saved_models\\training_progress.json", "w") as f:
-        json.dump([training_loss,
-                    val_L_Max_relevant_errs, 
-                    val_L_Avg_relevant_errs, 
-                    val_R_Max_relevant_errs, 
-                    val_R_Avg_relevant_errs, 
-                    validate_loss, 
-                    tra_L_Max_relevant_errs, 
-                    tra_L_Avg_relevant_errs, 
-                    tra_R_Max_relevant_errs, 
-                    tra_R_Avg_relevant_errs,], f)
     
