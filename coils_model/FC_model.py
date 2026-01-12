@@ -224,7 +224,7 @@ class FullyConnectedNet(nn.Module):
         # 保存模型参数字典
         torch.save(self.state_dict(), "saved_models\\coils_model_state_dict.pt")
         
-            # 保存训练过程数据以供可视化
+        # 保存训练过程数据以供可视化
         with open("saved_models\\training_progress.json", "w") as f:
             json.dump([training_loss, \
                         val_L_Max_relevant_errs, val_L_Avg_relevant_errs, \

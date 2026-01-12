@@ -1,0 +1,1 @@
+    with open("saved_models\\training_progress.json", "r") as f:

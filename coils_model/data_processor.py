@@ -75,7 +75,7 @@ def load_data(path: str | None = None,
             raise ValueError(f"CSV files in directory have inconsistent column counts: {cols}")
 
         data = np.vstack(parts) 
-        meta: dict = {'raw_data': data} # 创建meta，保存原始数据以备后用
+        meta: dict = {'raw_data': data.tolist()} # 创建meta，使用Python基础数据格式保存原始数据以备后用
         print(f"Loaded {len(parts)} CSV files, total shape: {data.shape}")
 
     # 将数据类型转换为 float32，以匹配 PyTorch 的默认精度
@@ -89,8 +89,8 @@ def load_data(path: str | None = None,
         x_std[x_std == 0.0] = 1.0 # 防止除以零
         X = (X - x_mean) / x_std
         # 将统计量保存到 meta 以供反归一化或在部署时使用
-        meta['x_mean'] = x_mean
-        meta['x_std'] = x_std
+        meta['x_mean'] = x_mean.tolist()
+        meta['x_std'] = x_std.tolist()
 
     # 将 numpy 数组转换为 PyTorch 张量
     X_t = torch.from_numpy(X)
@@ -100,10 +100,10 @@ def load_data(path: str | None = None,
     dataset = TensorDataset(X_t, Y_t)
 
     # 数据集划分
-    n = len(dataset)  # 总样本数
+    n = len(dataset)  
     rng = np.random.RandomState(random_seed)  # 使用 numpy 的 RandomState（随机数生成器） 以保证可复现
-    indices = np.arange(n)  # 生成所有样本索引
-    rng.shuffle(indices)  # 打乱索引顺序
+    indices = np.arange(n)  
+    rng.shuffle(indices) 
 
     # 根据指定的比例计算每个子集的样本数量
     n_test = int(n * test_ratio)
