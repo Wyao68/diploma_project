@@ -20,3 +20,6 @@ Thumbs.db
 
 # 目录下所有以 test 开头的 .py 文件
 \test*.py
+
+# .gitignore
+tempCodeRunnerFile*.py
