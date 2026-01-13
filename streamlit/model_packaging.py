@@ -9,9 +9,16 @@ from pathlib import Path
 import numpy as np
 import torch
 import streamlit as st
+import sys
+
+# 确保项目根目录在 sys.path 中，以便可以直接导入仓库内的包（例如 coils_model）
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    # 插入到 sys.path 开头，优先匹配本地仓库的模块而非已安装同名包
+    sys.path.insert(0, str(project_root))
 
 # my library
-import FC_model
+from coils_model import FC_model
 
 @st.cache_resource #缓存资源密集型对象，避免每次重新运行脚本时都重新加载或计算它们
 def load_model(state_path: str, net_dims: list[int]) -> tuple[torch.nn.Module, dict]:
@@ -93,7 +100,8 @@ def main():
     st.markdown('### 6.78MHz下PCB线圈电气参数预测模型')
     
     # 简要说明文字
-    st.caption('在下方输入 5 个线圈参数，工作频率固定为 6.78MHz，点击 Run model 预测线圈电气参数。')
+    st.caption('线圈工作频率固定为 6.78MHz，采用双层并联PCB结构，铜厚为两盎司。')
+    st.caption('下方输入 5 个线圈参数，点击 Run model 预测线圈电气参数。')
     
     # 默认模型文件路径
     parent_dir = Path(__file__).resolve().parent.parent
@@ -150,6 +158,10 @@ def main():
                 )
                 inputs.append(val)
     
+    # 使用 pathlib 构建图像路径，避免反斜杠转义带来的警告
+    img_path = Path(__file__).resolve().parent / 'graphs' / 'parameters_show.svg'
+    st.image(str(img_path), caption='参数示意图', width=700)
+
     # 运行按钮
     if st.button('🔧 Run model', type="primary", use_container_width=True):
         # 显示加载动画
