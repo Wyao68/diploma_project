@@ -11,7 +11,7 @@ import torch
 import streamlit as st
 import sys
 
-# 确保项目根目录在 sys.path 中，以便可以直接导入仓库内的包（例如 coils_model）
+# 确保项目根目录在 sys.path 中，以便可以直接导入仓库内的包
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     # 插入到 sys.path 开头，优先匹配本地仓库的模块而非已安装同名包
@@ -147,6 +147,16 @@ def main():
                 # 使用st.code或st.markdown显示固定值，使其视觉上类似输入框
                 st.markdown(f"6.78 {param_units[i]}")
                 inputs.append(6.78)
+            elif i == 0:  
+                # 线圈匝数为整数
+                label = f"{param_names[i]} ({param_units[i]})"
+                val = col.number_input(
+                    label=label, 
+                    step=1, 
+                    format="%d",
+                    key=f"input_{i}"  # 添加key避免Streamlit重复组件警告
+                )
+                inputs.append(val)
             else:
                 # 可编辑的参数
                 label = f"{param_names[i]} ({param_units[i]})"
@@ -154,11 +164,11 @@ def main():
                     label=label, 
                     step=0.2, 
                     format="%.2f",
-                    key=f"input_{i}"  # 添加key避免Streamlit重复组件警告
+                    key=f"input_{i}"  
                 )
                 inputs.append(val)
     
-    # 使用 pathlib 构建图像路径，避免反斜杠转义带来的警告
+    # 使用 pathlib 构建图像路径
     img_path = Path(__file__).resolve().parent / 'graphs' / 'parameters_show.svg'
     st.image(str(img_path), caption='参数示意图', width=700)
 
@@ -198,7 +208,7 @@ def main():
             with result_col3:
                 st.metric(
                     label="品质因数 Q",
-                    value=f"{out[0]*6.78/out[1]:.2f}",
+                    value=f"{out[0]*2*3.14159*6.78/out[1]:.2f}",
                     delta="无量纲"
                 )
             
@@ -206,7 +216,7 @@ def main():
             st.markdown("### 详细输出")
             result_data = {
                 "参数": ["电感值 (L)", "电阻值 (R)", "品质因数 (Q)"],
-                "值": [f"{out[0]:.2f}", f"{out[1]:.2f}", f"{out[0]*6.78/out[1]:.2f}"],
+                "值": [f"{out[0]:.2f}", f"{out[1]:.2f}", f"{out[0]*2*3.14159*6.78/out[1]:.2f}"],
                 "单位": ["μH", "Ω", "无量纲"]
             }
             st.table(result_data)
