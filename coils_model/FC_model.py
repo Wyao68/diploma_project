@@ -12,8 +12,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Subset
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-# My library
-import data_processor
+# My library（使用包内相对导入）
+from . import data_processor
 
 
 class FullyConnectedNet(nn.Module):
