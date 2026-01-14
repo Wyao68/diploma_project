@@ -6,14 +6,19 @@
 """
 # Standard library
 import json
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Subset
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-# My library（使用包内相对导入）
-from . import data_processor
+# My library（优先使用包内相对导入；当作为脚本直接运行时回退为同目录绝对导入）
+try:
+    from . import data_processor
+except Exception:
+    # 直接作为脚本运行时，包上下文可能不可用，回退到同目录模块导入
+    import data_processor
 
 
 class FullyConnectedNet(nn.Module):
@@ -75,6 +80,8 @@ class FullyConnectedNet(nn.Module):
         - tra_L_Avg_relevant_errs: 训练集电感平均相对误差列表
         - tra_R_Max_relevant_errs: 训练集电阻最大相对误差列表
         - tra_R_Avg_relevant_errs: 训练集电阻平均相对误差列表
+        - L_per_sample_errs: 验证集每个样本电感相对误差列表
+        - R_per_sample_errs: 验证集每个样本电阻相对误差列表
         '''
         # 创建损失与误差列表
         training_loss = []
@@ -87,6 +94,8 @@ class FullyConnectedNet(nn.Module):
         tra_L_Avg_relevant_errs = []
         tra_R_Max_relevant_errs = []
         tra_R_Avg_relevant_errs = []
+        L_per_sample_errs = []
+        R_per_sample_errs = []
 
         # 数据加载
         n_train = min(training_data_size, len(train_ds))
@@ -219,7 +228,22 @@ class FullyConnectedNet(nn.Module):
 
             # 打印本轮训练结果
             print(f"Epoch {epoch:02d} - "
-                  f"Training Loss: {tra_loss:.4f}, ")
+                  f"Training Loss: {tra_loss:.4f}")
+        
+        # 在最后一个epoch结束后，计算并保存验证集每个样本的相对误差
+        with torch.no_grad():
+            for xb, yb in val_loader:
+                xb = xb.to(device)
+                yb = yb.to(device)
+                preds = self(xb)
+                rel = (preds - yb).abs() / yb.abs()
+                L_per_sample = rel[:, 0]
+                R_per_sample = rel[:, 1]
+                L_per_sample_errs.append(L_per_sample.cpu().numpy())
+                R_per_sample_errs.append(R_per_sample.cpu().numpy())
+
+            L_per_sample_errs = np.concatenate(L_per_sample_errs, axis=0).tolist()
+            R_per_sample_errs = np.concatenate(R_per_sample_errs, axis=0).tolist()
 
         # 保存模型参数字典
         torch.save(self.state_dict(), "saved_models\\coils_model_state_dict.pt")
@@ -231,7 +255,8 @@ class FullyConnectedNet(nn.Module):
                         val_R_Max_relevant_errs, val_R_Avg_relevant_errs, \
                         validate_loss, \
                         tra_L_Max_relevant_errs, tra_L_Avg_relevant_errs, \
-                        tra_R_Max_relevant_errs, tra_R_Avg_relevant_errs,], f)
+                        tra_R_Max_relevant_errs, tra_R_Avg_relevant_errs, \
+                        L_per_sample_errs, R_per_sample_errs], f)
 
 
 if __name__ == '__main__':
