@@ -2,7 +2,7 @@
 
 主要功能：
 - 定义一个全连接神经网络类 FullyConnectedNet
-- 实现训练和验证流程，并保存训练好的模型参数
+- 实现训练和验证流程，并保存训练好的模型参数与训练过程数据
 """
 # Standard library
 import json
@@ -13,11 +13,10 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Subset
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-# My library（优先使用包内相对导入；当作为脚本直接运行时回退为同目录绝对导入）
+# My library（优先使用包内相对导入）
 try:
     from . import data_processor
 except Exception:
-    # 直接作为脚本运行时，包上下文可能不可用，回退到同目录模块导入
     import data_processor
 
 
@@ -30,12 +29,12 @@ class FullyConnectedNet(nn.Module):
         # 构建隐藏层(带激活与 dropout)，输出层不加激活与dropout
         in_dim = net_dims[0]
         for i, out_dim in enumerate(net_dims[1:]):  # enumerate 同时返回索引和值
-            is_last = (i == len(net_dims[1:]) - 1)
+            is_last = (i == len(net_dims[:]) - 2)  # 判断是否为隐藏层的最后一层
             layers.append(nn.Linear(in_dim, out_dim))
             if not is_last:
-                layers.append(nn.ReLU())
+                layers.append(nn.ReLU())    # 添加激活函数
                 if self.dropout_p > 0.0:
-                    layers.append(nn.Dropout(p=self.dropout_p))
+                    layers.append(nn.Dropout(p=self.dropout_p)) # 添加 dropout 层
             in_dim = out_dim
 
         self.model = nn.Sequential(*layers)
@@ -43,20 +42,18 @@ class FullyConnectedNet(nn.Module):
         self._init_weights()
 
     def _init_weights(self):
-        # ReLU 更适合使用 Kaiming 初始化以保持前向方差稳定
+        # 随机初始化权重防止网络对称
+        # 对 ReLU 使用 Kaiming 初始化以保持前向方差稳定
         for layer in self.modules():
             if isinstance(layer, nn.Linear):
                 nn.init.kaiming_normal_(layer.weight, nonlinearity='relu')
                 if layer.bias is not None:
                     nn.init.zeros_(layer.bias)
-
-    def forward(self, x):
-        return self.model(x)
     
     def running(self, 
                 train_ds: torch.utils.data.Dataset, 
                 val_ds: torch.utils.data.Dataset, 
-                training_data_size: int = 1000,
+                training_data_size: int | None = None,
                 epochs: int = 30, 
                 batch_size: int = 20):
         '''
@@ -65,17 +62,17 @@ class FullyConnectedNet(nn.Module):
         参数说明：
         - train_ds: 训练集
         - val_ds: 验证集
-        - training_data_size: 指定训练数据集大小(当指定范围大于实际数据集时，自动调整为实际大小)
+        - training_data_size: 指定训练数据集大小(当指定范围大于实际数据集时，自动调整为实际大小，不指定则默认使用全部数据)
         - epochs: 训练轮次
         - batch_size: 批次大小
         
         保存信息：
         - tra_loss: 训练损失列表
-        - val_L_Max_relevant_errs: 测试集电感最大相对误差列表
-        - val_L_Avg_relevant_errs: 测试集电感平均相对误差列表 
-        - val_R_Max_relevant_errs: 测试集电阻最大相对误差列表
-        - val_R_Avg_relevant_errs: 测试集电阻平均相对误差列表       
-        - val_loss: 测试损失列表
+        - val_L_Max_relevant_errs: 验证集电感最大相对误差列表
+        - val_L_Avg_relevant_errs: 验证集电感平均相对误差列表 
+        - val_R_Max_relevant_errs: 验证集电阻最大相对误差列表
+        - val_R_Avg_relevant_errs: 验证集电阻平均相对误差列表       
+        - val_loss: 验证集损失列表
         - tra_L_Max_relevant_errs: 训练集电感最大相对误差列表
         - tra_L_Avg_relevant_errs: 训练集电感平均相对误差列表
         - tra_R_Max_relevant_errs: 训练集电阻最大相对误差列表
@@ -98,9 +95,12 @@ class FullyConnectedNet(nn.Module):
         R_per_sample_errs = []
 
         # 数据加载
-        n_train = min(training_data_size, len(train_ds))
-        train_subset = Subset(train_ds, list(range(n_train)))
-        train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=True)
+        if training_data_size is not None:
+            n_train = min(training_data_size, len(train_ds))
+            train_subset = Subset(train_ds, list(range(n_train)))
+            train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=True)
+        else:
+            train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
 
         val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
 
@@ -108,11 +108,12 @@ class FullyConnectedNet(nn.Module):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.to(device)
         
-        # 损失函数
+        # 损失函数（均方差）
         criterion = nn.MSELoss() 
         
         # 优化器
-        optimizer = optim.AdamW(self.parameters(),
+        optimizer = optim.AdamW(
+                       self.parameters(),
                        lr=1e-2,             # 学习率
                        betas=(0.9, 0.999),  # 一阶&二阶矩动量系数
                        weight_decay=1e-4,   # L2正则化系数
@@ -138,8 +139,8 @@ class FullyConnectedNet(nn.Module):
                 batch_x = batch_x.to(device) 
                 batch_y = batch_y.to(device)
 
-                optimizer.zero_grad()                # 每轮训练开始时梯度清零
-                outputs = self(batch_x)              # 前向传播
+                optimizer.zero_grad()                # 每个batch训练开始时梯度清零
+                outputs = self.model(batch_x)        # 前向传播
                 t_loss = criterion(outputs, batch_y) # 计算损失函数
                 t_loss.backward()                    # 反向传播
                 optimizer.step()                     # 参数更新
@@ -166,9 +167,9 @@ class FullyConnectedNet(nn.Module):
                     tx = tx.to(device) 
                     ty = ty.to(device)
 
-                    t_outputs = self(tx)
+                    t_outputs = self.model(tx)
                     t_loss = criterion(t_outputs, ty)
-                    tra_loss += t_loss.item() * tx.size(0) 
+                    tra_loss += t_loss.item() * tx.size(0) # 平均值乘以样本数量得到总损失，以便后续计算平均损失
                     # 每个样本每个维度的相对误差，形状 [batch_size, output_dim]
                     t_rel_err = (t_outputs - ty).abs() / ty.abs()
 
@@ -198,7 +199,7 @@ class FullyConnectedNet(nn.Module):
                     vx = vx.to(device)
                     vy = vy.to(device)
 
-                    v_outputs = self(vx)
+                    v_outputs = self.model(vx)
                     v_loss = criterion(v_outputs, vy)
 
                     val_loss += v_loss.item() * vx.size(0)
@@ -224,7 +225,7 @@ class FullyConnectedNet(nn.Module):
                 val_L_Avg_relevant_errs.append(val_L_Avg_rel_err)
                 val_R_Avg_relevant_errs.append(val_R_Avg_rel_err)
 
-            scheduler.step(val_loss) # 根据验证集的结果调整学习率
+            scheduler.step(val_loss) # 根据验证集的结果调整学习率（学习率调度器）
 
             # 打印本轮训练结果
             print(f"Epoch {epoch:02d} - "
@@ -235,7 +236,7 @@ class FullyConnectedNet(nn.Module):
             for xb, yb in val_loader:
                 xb = xb.to(device)
                 yb = yb.to(device)
-                preds = self(xb)
+                preds = self.model(xb)
                 rel = (preds - yb).abs() / yb.abs()
                 L_per_sample = rel[:, 0]
                 R_per_sample = rel[:, 1]
@@ -264,7 +265,7 @@ if __name__ == '__main__':
     # 加载数据集
     train_ds, val_ds, test_ds, meta = data_processor.load_data()
     
-    net_dims = [6, 32, 64, 64, 32, 2]  # 网络层维度列表
+    net_dims = [5, 32, 64, 64, 32, 2]  # 网络层维度列表
     model = FullyConnectedNet(net_dims)
     model.running(train_ds, val_ds, training_data_size=4000, epochs=100, batch_size=64)
     

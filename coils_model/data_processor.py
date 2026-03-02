@@ -29,17 +29,16 @@ def _default_data_path() -> str:
 
 
 def load_data(path: str | None = None,
-                input_cols: int = 6,
+                input_cols: int = 5,
                 output_cols: int = 3,
                 normalize: bool = True,
                 val_ratio: float = 0.2,
-                test_ratio: float = 0.0,
-                random_seed: int = 42) -> tuple[TensorDataset, TensorDataset, TensorDataset, dict]:
-    """加载数据并返回 Train/Val/Test TensorDataset。
+                test_ratio: float = 0.0) -> tuple[TensorDataset, TensorDataset, TensorDataset, dict]:
+    """加载数据并返回 Train/Val/Test: TensorDataset。
 
     参数说明：
       - path: CSV 文件路径，默认使用模块内置数据路径。
-      - input_cols: 输入特征列数(从左侧开始)，默认 6。
+      - input_cols: 输入特征列数(从左侧开始)，默认 5。
       - output_cols: 输出列数(从右侧开始，且不包含最后一列)，默认 3。
       - normalize: 是否对输入做标准化(均值 0、方差 1)。
       - test_ratio, val_ratio: 测试集与验证集比例(相对于全部数据)。
@@ -57,7 +56,7 @@ def load_data(path: str | None = None,
     if not os.path.exists(path):
         raise FileNotFoundError(f"directory not found: {path}")
 
-    # 读取路径中所有 CSV 并合并
+    # 读取路径中所有 CSV 文件路径位置
     if os.path.isdir(path):
         csv_files = sorted([os.path.join(path, fn) for fn in os.listdir(path)
                             if fn.lower().endswith('.csv')])
@@ -66,16 +65,16 @@ def load_data(path: str | None = None,
 
         parts = []
         for fn in csv_files:
-            part = np.genfromtxt(fn, delimiter=',', dtype=float, skip_header=1) # 跳过表头
+            part = np.genfromtxt(fn, delimiter=',', dtype=float, skip_header=1) # 跳过表头（fn为文件路径）
             parts.append(part)
 
-        # 检查所有部分的列数是否一致
+        # 检查每个 CSV 文件的列数是否一致
         cols = [p.shape[1] for p in parts]
         if len(set(cols)) != 1:
             raise ValueError(f"CSV files in directory have inconsistent column counts: {cols}")
 
-        data = np.vstack(parts) 
-        meta: dict = {'raw_data': data.tolist()} # 创建meta，使用Python基础数据格式保存原始数据以备后用
+        data = np.vstack(parts)     # 合成为一个大数组
+        meta: dict = {'raw_data': data.tolist()} # 创建meta，使用Python基础数据格式保存
         print(f"Loaded {len(parts)} CSV files, total shape: {data.shape}")
 
     # 将数据类型转换为 float32，以匹配 PyTorch 的默认精度
@@ -84,9 +83,9 @@ def load_data(path: str | None = None,
 
     # 对输入特征进行归一化
     if normalize:
-        x_mean = X.mean(axis=0, keepdims=True)
+        x_mean = X.mean(axis=0, keepdims=True)  # keepdims=True 保持维度以便后续广播
         x_std = X.std(axis=0, keepdims=True)
-        x_std[x_std == 0.0] = 1.0 # 防止除以零
+        x_std[x_std == 0.0] = 1.0 # 防止除以零（方差为0说明为一组常数，归一化后全为0）
         X = (X - x_mean) / x_std
         # 将统计量保存到 meta 以供反归一化或在部署时使用
         meta['x_mean'] = x_mean.tolist()
@@ -101,14 +100,13 @@ def load_data(path: str | None = None,
 
     # 数据集划分
     n = len(dataset)  
-    rng = np.random.RandomState(random_seed)  # 使用 numpy 的 RandomState（随机数生成器） 以保证可复现
-    indices = np.arange(n)  
-    rng.shuffle(indices) 
+    indices = np.random.permutation(n) 
 
     # 根据指定的比例计算每个子集的样本数量
     n_test = int(n * test_ratio)
     n_val = int(n * val_ratio)
-    n_train = n - n_test - n_val
+    n_train = n - n_test - n_val # 使用减法避免int转换导致的舍入误差，确保总数不变
+    
     # 若训练集为空，提示用户调整比例参数
     if n_train <= 0:
         raise ValueError("划分比例导致训练集为空，请调整 test_ratio, val_ratio")
