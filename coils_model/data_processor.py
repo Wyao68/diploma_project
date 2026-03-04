@@ -32,7 +32,7 @@ def load_data(path: str | None = None,
                 input_cols: int = 5,
                 output_cols: int = 3,
                 normalize: bool = True,
-                val_ratio: float = 0.2,
+                val_ratio: float = 0.1,
                 test_ratio: float = 0.0) -> tuple[TensorDataset, TensorDataset, TensorDataset, dict]:
     """加载数据并返回 Train/Val/Test: TensorDataset。
 
@@ -142,6 +142,6 @@ if __name__ == '__main__':
         # 打印训练集第一个样本的输入/输出形状便于调试（若训练集为空则显示 None）
         print("Input shape:", train_ds[0][0].shape if len(train_ds) else None)
         print("Output shape:", train_ds[0][1].shape if len(train_ds) else None)
-    except Exception as e:
+    except Exception:
         # 捕获并打印任何异常
-        print("Self-test failed:", e)
+        print("Self-test failed")

@@ -1,194 +1,162 @@
-"""超参数优化脚本（支持 Optuna 或回退为随机搜索）
+"""使用 Optuna 对全连接网络做超参数优化的最小脚本
 
-主要功能：
-  - 在较短的训练周期内搜索最优超参数（学习率、正则化、dropout、batch_size 等），
-    以期提高验证集的平均相对误差。
+功能：
+- 优化隐藏层数量（num_layers）
+- 优化每层神经元数（每层单独采样）
+- 优化学习率（learning_rate）
 
-说明：
-  - 使用 Optuna 对模型进行超参数优化。
-  - 每个 trial 会：实例化模型 -> 在训练子集上训练若干个 epoch -> 在验证集上评估目标指标。
-  - 目标函数：验证集的平均相对误差。
+使用说明（在 Windows PowerShell 中）：
+    python coils_model\hyperopt.py --trials 30 --epochs 20
 
-运行示例：
-  python -m coils_model.hyperopt --trials 50 --epochs 5 --train-size 2000
-
+注意：该脚本尽量复用 `coils_model.FC_model.FullyConnectedNet` 与
+`coils_model.data_processor.load_data`，但训练循环为简化版，便于在 Optuna 中快速评估。
 """
 
-# Standard library
-import argparse
-import json
-import os
+import argparse # 命令行参数解析（接口）
 import optuna
-import random
-import numpy as np
+
 import torch
 import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader
 
-# My library (包内相对导入，确保作为包运行时能找到模块)
-from . import data_processor, FC_model
+# 作为包运行时相对导入，直接运行时绝对导入
+try:
+    from .FC_model import FullyConnectedNet
+    from .data_processor import load_data
+except Exception:
+    from FC_model import FullyConnectedNet
+    from data_processor import load_data
 
 
-def set_random_seed(seed=33):
-    """设置所有随机种子，以确保不同参数组合在相同随机条件下比较"""
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
+def build_net_dims(input_dim: int, output_dim: int, hidden_units: list[int]) -> list[int]:
+    """根据输入维度、输出维度和隐藏层单元列表构建 net_dims 列表:
+        [input_dim, hidden1, hidden2, ..., output_dim]
+    """
+    return [input_dim] + hidden_units + [output_dim]
+
+
+def objective(trial: optuna.trial.Trial, epochs: int = 20, batch_size: int = 64, training_data_size: int | None = None) -> float:
+    """Optuna 的目标函数：
+
+    - 从数据加载器获取训练/验证集
+    - 根据 trial 采样网络结构与学习率
+    - 用一个精简训练循环训练若干 epoch，并返回最后一个 epoch 的验证集平均损失（MSE）
+    - 使用 AdamW 优化器与 MSELoss
+    - 在每个 epoch 后向 Optuna 报告中间值并支持剪枝
     
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-    return seed
-
-RANDOM_SEED = set_random_seed()
-
-
-def train_for_one_trial(model: torch.nn.Module,
-                        train_ds: torch.utils.data.Dataset,
-                        val_ds: torch.utils.data.Dataset,
-                        device: torch.device,
-                        lr: float = 1e-3,
-                        weight_decay: float = 1e-4,
-                        batch_size: int = 64,
-                        epochs: int = 5,
-                        training_data_size: int = 3000,) -> float:
-    """
-    对单个超参数配置进行短训练并返回验证集的平均相对误差。
-
-    参数说明：
-        - model: 待训练的模型实例。
-        - train_ds: 训练数据集。
-        - val_ds: 验证数据集。
-        - device: 训练设备。
-        - lr: 学习率。
-        - weight_decay: 权重衰减（L2 正则化）。
-        - batch_size: 批量大小。
-        - epochs: 训练周期数。
-        - training_data_size: 用于训练的样本数量（从训练集中截取子集）。
-        - dropout_p: 包含在model内，不需要额外传入。
+    采样的超参数包括：
+    - 隐藏层数量
+    - 每层单独采样神经元数量
+    - adamW学习率
     """
 
+    # 加载数据
+    train_ds, val_ds, test_ds, meta = load_data(val_ratio = 0.1, test_ratio = 0.0)
+
+    # 确保验证集存在
+    if len(val_ds) == 0:
+        raise RuntimeError("验证集为空，请调整 data_processor.load_data 的划分参数以包含验证集")
+
+    # 从 dataset 推断输入与输出维度
+    input_dim = train_ds[0][0].shape[0]
+    output_dim = train_ds[0][1].shape[0]
+
+    # 采样超参数
+    # 隐藏层数量，1-4层
+    n_hidden = trial.suggest_int("n_hidden", 1, 4)
+    hidden_units = []
+    for i in range(n_hidden):
+        # 每层神经元数量，8-256个，使用对数尺度均匀采样
+        units = trial.suggest_int(f"n_units_layer{i}", 8, 256, log=True)
+        hidden_units.append(units)
+
+    # 学习率，1e-5 到 1e-1，使用对数尺度均匀采样
+    lr = trial.suggest_float("lr", 1e-5, 1e-1, log=True)
+
+    net_dims = build_net_dims(input_dim, output_dim, hidden_units)
+
+    # 构建模型并移动到设备（优先 GPU）
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = FullyConnectedNet(net_dims)
     model.to(device)
-    criterion = nn.MSELoss()
-    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
 
-    # 数据加载器
-    n_train = min(training_data_size, len(train_ds))
-    train_subset = Subset(train_ds, list(range(n_train)))
-    train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=True)
+    # 加载数据到 DataLoader，支持可选的训练数据子集大小用于快速测试
+    if training_data_size is not None:
+        n_train = min(training_data_size, len(train_ds))
+        train_subset = torch.utils.data.Subset(train_ds, list(range(n_train)))
+        train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=True)
+    else:
+        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
+
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
 
-    # 简短的训练循环
-    model.train()
+    # 损失与优化器
+    criterion = nn.MSELoss()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4) # weighted decay暂时固定，后续可加入优化
+
+    # 训练循环
     for epoch in range(1, epochs + 1):
+        model.train()
         for tx, ty in train_loader:
             tx = tx.to(device)
             ty = ty.to(device)
             optimizer.zero_grad()
-            preds = model(tx)
+            
+            preds = model.model(tx)
             loss = criterion(preds, ty)
             loss.backward()
             optimizer.step()
 
-    # 性能验证
-    model.eval()
-    val_total = 0
-    val_sum = 0.0
-    with torch.no_grad():
-        for vx, vy in val_loader:
-            vx = vx.to(device)
-            vy = vy.to(device)
-            v_preds = model(vx)
-            rel = (v_preds - vy).abs() / vy.abs()
-            per_sample = rel.mean(dim=1)  # 每个样本的平均相对误差(电感和电阻相对误差的平均值)
-            val_sum += per_sample.sum().item()
-            val_total += per_sample.size(0)
+        # 评估验证集损失
+        model.eval()
+        val_loss = 0.0
+        n_val = 0
+        with torch.no_grad():
+            for vx, vy in val_loader:
+                vx = vx.to(device)
+                vy = vy.to(device)
+                preds = model.model(vx)
+                l = criterion(preds, vy)
+                val_loss += l.item() * vx.size(0)
+                n_val += vx.size(0)
 
-        val_avg = val_sum / val_total
-        return val_avg
+        val_loss = val_loss / n_val
+
+        # 每个epoch结束后向 Optuna 报告中间结果并判断剪枝
+        trial.report(val_loss, epoch)
+        if trial.should_prune():
+            raise optuna.exceptions.TrialPruned() # 如果剪枝，抛出异常，并让 Optuna 记录该 trial
+
+    # 返回最终 epoch 的验证损失作为优化目标
+    return float(val_loss)
 
 
-def run_optuna(trials: int,
-               train_ds: torch.utils.data.Dataset,
-               val_ds: torch.utils.data.Dataset,
-               net_dims: list[int],
-               device: torch.device,
-               epochs: int,
-               training_data_size: int) -> dict[str, any]:
+def run_study(n_trials: int = 20, epochs: int = 20, batch_size: int = 64, training_data_size: int | None = None):
     """
-    使用 Optuna 进行超参数搜索的封装。
+    运行 Optuna study 并打印最优结果。
     """
-    # 内部优化对象函数
-    def objective(trial: 'optuna.trial.Trial') -> float:
-        # 为每个 trial 派生一个专用种子，保证在该 trial 内可重复，但不同 trial 间仍然独立
-        trial_seed = RANDOM_SEED + trial.number
-        set_random_seed(trial_seed)
-        # 记录到 trial 的用户属性，便于后续复现最优 trial
-        trial.set_user_attr('seed', int(trial_seed))
+    sampler = optuna.samplers.TPESampler()
+    study = optuna.create_study(direction="minimize", sampler=sampler)
 
-        # 样本超参数空间定义
-        lr = trial.suggest_loguniform('lr', 1e-5, 1e-1) # 对数均匀采样
-        wd = trial.suggest_loguniform('weight_decay', 1e-6, 1e-2)
-        dropout = trial.suggest_uniform('dropout', 0.0, 0.5) # 均匀采样
-        batch_size = trial.suggest_categorical('batch_size', [32, 64, 128, 256]) # 离散选择
+    try:
+        study.optimize(lambda t: objective(t, epochs=epochs, batch_size=batch_size, training_data_size=training_data_size), n_trials=n_trials)
+    except KeyboardInterrupt:
+        print("用户中断，停止优化。")
 
-        model = FC_model.FullyConnectedNet(net_dims, dropout_p=dropout)
-        val_avg = train_for_one_trial(model, train_ds, val_ds, device,
-                                      lr=lr, weight_decay=wd, dropout_p=dropout,
-                                      batch_size=batch_size, epochs=epochs,
-                                      training_data_size=training_data_size)
-        return float(val_avg)
-
-    # 创建 Optuna study 并开始优化
-    study = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(seed=RANDOM_SEED))
-
-    study.optimize(objective, n_trials=trials)
-
-    # 使用字典记录最佳结果
-    best = {'value': study.best_value, 'params': study.best_trial.params}
-    best['seed'] = study.best_trial.user_attrs.get('seed', None)
-
-    return best
-
-
-def main():
-    parser = argparse.ArgumentParser(description='Hyperparameter optimization for coils_model')
-    parser.add_argument('--trials', type=int, default=20, help='Number of trials')
-    parser.add_argument('--epochs', type=int, default=3, help='Epochs per trial (short)')
-    parser.add_argument('--train-size', type=int, default=2000, help='Number of training samples to use per trial')
-    parser.add_argument('--net-dims', type=str, default='6,32,64,64,32,2', help='Comma-separated net dims')
-    parser.add_argument('--no-optuna', action='store_true', help='Force using random search even if optuna is available')
-    args = parser.parse_args()
-
-    net_dims = [int(x) for x in args.net_dims.split(',') if x.strip()]
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # 加载数据（按包内 data_processor）
-    train_ds, val_ds, test_ds, meta = data_processor.load_data(val_ratio=0.2, test_ratio=0.0, random_seed=RANDOM_SEED)
-
-    if not args.no_optuna:
-        try:
-            print('Starting Optuna optimization...')
-            best = run_optuna(args.trials, train_ds, val_ds, net_dims, device, args.epochs, args.train_size)
-            print('Optuna best:', best)
-        except Exception as e:
-            print('Optuna not available or failed, falling back to random search. Error:', e)
-            best = objective_random_search(params_space, args.trials, train_ds, val_ds, net_dims, device, args.epochs, args.train_size)
-            print('Random search best:', best)
-    else:
-        print('Running random search...')
-        best = objective_random_search(params_space, args.trials, train_ds, val_ds, net_dims, device, args.epochs, args.train_size)
-        print('Random search best:', best)
-
-    # 将最佳结果保存到文件，便于后续加载
-    os.makedirs('saved_models', exist_ok=True)
-    with open('saved_models/hpo_best.json', 'w') as f:
-        json.dump({'best': best}, f, indent=2)
-
-    print('Saved best params to saved_models/hpo_best.json')
+    print("Best trial:")
+    trial = study.best_trial
+    print(f"  Value: {trial.value}")
+    print("  Params:")
+    for k, v in trial.params.items():
+        print(f"    {k}: {v}")
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description="使用 Optuna 对全连接网络做超参数搜索（最小示例）")
+    parser.add_argument("--trials", type=int, default=50, help="Optuna trials 数量")
+    parser.add_argument("--epochs", type=int, default=50, help="每个 trial 的训练 epoch 数")
+    parser.add_argument("--batch_size", type=int, default=64, help="训练批大小")
+    parser.add_argument("--training_data_size", type=int, default=None, help="用于训练的样本数量(None 表示全部）")
+    args = parser.parse_args()
+
+    run_study(n_trials=args.trials, epochs=args.epochs, batch_size=args.batch_size, training_data_size=args.training_data_size)

@@ -107,7 +107,7 @@ def main():
     parent_dir = Path(__file__).resolve().parent.parent
     state_path = os.path.join(parent_dir, 'saved_models', 'coils_model_state_dict.pt')
     
-    net_dims = [6, 32, 64, 64, 32, 2] 
+    net_dims = [5, 32, 64, 64, 32, 2] 
     model, meta = load_model(state_path, net_dims)
     
     # 参数名称和单位
@@ -146,7 +146,6 @@ def main():
                 st.markdown(f"**{param_names[i]}**")
                 # 使用st.code或st.markdown显示固定值，使其视觉上类似输入框
                 st.markdown(f"6.78 {param_units[i]}")
-                inputs.append(6.78)
             elif i == 0:  
                 # 线圈匝数为整数
                 label = f"{param_names[i]} ({param_units[i]})"
@@ -162,7 +161,7 @@ def main():
                 label = f"{param_names[i]} ({param_units[i]})"
                 val = col.number_input(
                     label=label, 
-                    step=0.2, 
+                    step=0.5, 
                     format="%.2f",
                     key=f"input_{i}"  
                 )

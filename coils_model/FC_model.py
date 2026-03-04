@@ -13,12 +13,6 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Subset
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-# My library（优先使用包内相对导入）
-try:
-    from . import data_processor
-except Exception:
-    import data_processor
-
 
 class FullyConnectedNet(nn.Module):
     def __init__(self, net_dims, dropout_p=0.0):
@@ -42,7 +36,6 @@ class FullyConnectedNet(nn.Module):
         self._init_weights()
 
     def _init_weights(self):
-        # 随机初始化权重防止网络对称
         # 对 ReLU 使用 Kaiming 初始化以保持前向方差稳定
         for layer in self.modules():
             if isinstance(layer, nn.Linear):
@@ -54,8 +47,10 @@ class FullyConnectedNet(nn.Module):
                 train_ds: torch.utils.data.Dataset, 
                 val_ds: torch.utils.data.Dataset, 
                 training_data_size: int | None = None,
-                epochs: int = 30, 
-                batch_size: int = 20):
+                epochs: int = 100, 
+                batch_size: int = 64,
+                lr = 1e-2,
+                weight_decay = 1e-4):
         '''
         执行训练过程并保存训练过程信息以便可视化
         
@@ -114,9 +109,8 @@ class FullyConnectedNet(nn.Module):
         # 优化器
         optimizer = optim.AdamW(
                        self.parameters(),
-                       lr=1e-2,             # 学习率
-                       betas=(0.9, 0.999),  # 一阶&二阶矩动量系数
-                       weight_decay=1e-4,   # L2正则化系数
+                       lr=lr,             # 学习率
+                       weight_decay=weight_decay,   # L2正则化系数
                        )    
            
         #学习率调度器
@@ -125,10 +119,6 @@ class FullyConnectedNet(nn.Module):
                         mode='min',           # 监控损失最小化
                         factor=0.5,           # 学习率减半
                         patience=5,           # 5个epoch无改善就调整
-                        threshold=1e-4,       # 改善阈值
-                        threshold_mode='rel', # 相对变化
-                        cooldown=0,           # 调整后冷却轮数
-                        min_lr=1e-6,          # 最小学习率
                         )
         
         # 训练与验证循环
@@ -225,7 +215,8 @@ class FullyConnectedNet(nn.Module):
                 val_L_Avg_relevant_errs.append(val_L_Avg_rel_err)
                 val_R_Avg_relevant_errs.append(val_R_Avg_rel_err)
 
-            scheduler.step(val_loss) # 根据验证集的结果调整学习率（学习率调度器）
+            # 学习率调度器根据验证集的结果调整学习率
+            scheduler.step(val_loss) 
 
             # 打印本轮训练结果
             print(f"Epoch {epoch:02d} - "
@@ -259,13 +250,4 @@ class FullyConnectedNet(nn.Module):
                         tra_R_Max_relevant_errs, tra_R_Avg_relevant_errs, \
                         L_per_sample_errs, R_per_sample_errs], f)
 
-
-if __name__ == '__main__':
-    # 作为脚本执行时进行简单测试
-    # 加载数据集
-    train_ds, val_ds, test_ds, meta = data_processor.load_data()
-    
-    net_dims = [5, 32, 64, 64, 32, 2]  # 网络层维度列表
-    model = FullyConnectedNet(net_dims)
-    model.running(train_ds, val_ds, training_data_size=4000, epochs=100, batch_size=64)
     

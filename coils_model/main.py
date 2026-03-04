@@ -29,12 +29,12 @@ def set_random_seed(seed=33):
 RANDOM_SEED = set_random_seed()
 
 if __name__ == "__main__":
-    training_data, validation_data, test_data, meta = data_processor.load_data(val_ratio = 0.3, test_ratio = 0.0)
+    training_data, validation_data, test_data, meta = data_processor.load_data(val_ratio = 0.1, test_ratio = 0.0)
     # 保存 meta 以供后续调用模型
     with open("saved_models\\meta.json", "w") as f:json.dump(meta, f)
 
-    net = FC_model.FullyConnectedNet([5, 32, 64, 64, 32, 2], dropout_p=0.0) 
+    net = FC_model.FullyConnectedNet([5, 31, 110, 48, 2], dropout_p=0.0)
     
-    net.running(training_data, validation_data, training_data_size=4000 ,epochs=100, batch_size=64)
+    net.running(training_data, validation_data ,epochs=100, batch_size=64, lr = 4e-3, weight_decay = 1e-4)
 
     
