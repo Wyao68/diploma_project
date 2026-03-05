@@ -5,6 +5,7 @@
 - 实现训练和验证流程，并保存训练好的模型参数与训练过程数据
 """
 # Standard library
+import os
 import json
 import numpy as np
 import torch
@@ -237,11 +238,13 @@ class FullyConnectedNet(nn.Module):
             L_per_sample_errs = np.concatenate(L_per_sample_errs, axis=0).tolist()
             R_per_sample_errs = np.concatenate(R_per_sample_errs, axis=0).tolist()
 
+
+        base = os.path.dirname(os.path.dirname(__file__))
         # 保存模型参数字典
-        torch.save(self.state_dict(), "saved_models\\coils_model_state_dict.pt")
+        torch.save(self.state_dict(), os.path.join(base, "saved_models", "coils_model_state_dict.pt"))
         
         # 保存训练过程数据以供可视化
-        with open("saved_models\\training_progress.json", "w") as f:
+        with open(os.path.join(base, "saved_models", "training_progress.json"), "w") as f:
             json.dump([training_loss, \
                         val_L_Max_relevant_errs, val_L_Avg_relevant_errs, \
                         val_R_Max_relevant_errs, val_R_Avg_relevant_errs, \

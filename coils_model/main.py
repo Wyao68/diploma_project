@@ -3,10 +3,9 @@
 """
 
 # Standard library
-import json
+import os
 
-# My library（主程序中直接导入）
-import data_processor
+# My library
 import FC_model
 
 # Third-party libraries
@@ -29,12 +28,15 @@ def set_random_seed(seed=33):
 RANDOM_SEED = set_random_seed()
 
 if __name__ == "__main__":
-    training_data, validation_data, test_data, meta = data_processor.load_data(val_ratio = 0.1, test_ratio = 0.0)
-    # 保存 meta 以供后续调用模型
-    with open("saved_models\\meta.json", "w") as f:json.dump(meta, f)
+    # 加载数据
+    base = os.path.dirname(os.path.dirname(__file__))
+    data_path = os.path.join(base, 'saved_models')
 
-    net = FC_model.FullyConnectedNet([5, 31, 110, 48, 2], dropout_p=0.0)
+    training_ds = torch.load(os.path.join(data_path, 'training_data.pt'), weights_only=False)
+    test_ds = torch.load(os.path.join(data_path, 'test_data.pt'), weights_only=False)
+
+    net = FC_model.FullyConnectedNet([5, 39, 116, 233, 2], dropout_p=0.0)
     
-    net.running(training_data, validation_data ,epochs=100, batch_size=64, lr = 4e-3, weight_decay = 1e-4)
+    net.running(training_ds, test_ds, epochs=100, batch_size=64, lr = 2.7e-3, weight_decay = 1e-4)
 
     

@@ -1,9 +1,9 @@
 """使用 Optuna 对全连接网络做超参数优化的最小脚本
 
 功能：
-- 优化隐藏层数量（num_layers）
+- 优化隐藏层数量(num_layers)
 - 优化每层神经元数（每层单独采样）
-- 优化学习率（learning_rate）
+- 优化学习率(learning_rate)
 
 使用说明（在 Windows PowerShell 中）：
     python coils_model\hyperopt.py --trials 30 --epochs 20
@@ -12,6 +12,7 @@
 `coils_model.data_processor.load_data`，但训练循环为简化版，便于在 Optuna 中快速评估。
 """
 
+import os
 import argparse # 命令行参数解析（接口）
 import optuna
 
@@ -51,7 +52,11 @@ def objective(trial: optuna.trial.Trial, epochs: int = 20, batch_size: int = 64,
     """
 
     # 加载数据
-    train_ds, val_ds, test_ds, meta = load_data(val_ratio = 0.1, test_ratio = 0.0)
+    base = os.path.dirname(os.path.dirname(__file__))
+    data_path = os.path.join(base, 'saved_models')
+
+    train_ds = torch.load(os.path.join(data_path, 'training_data.pt'), weights_only=False)
+    val_ds = torch.load(os.path.join(data_path, 'validation_data.pt'), weights_only=False)
 
     # 确保验证集存在
     if len(val_ds) == 0:

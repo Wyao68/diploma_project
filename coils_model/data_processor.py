@@ -15,6 +15,7 @@
 """
 
 import os  
+import json
 
 import numpy as np 
 import torch 
@@ -132,16 +133,24 @@ def load_data(path: str | None = None,
 
 
 if __name__ == '__main__':
-    # 当作为脚本执行时，运行一个简单的自检：尝试加载文件并打印出数据集信息
+    # 设置随机种子以确保结果可复现
+    np.random.seed(33)
+    # 作为脚本执行时，进行数据划分并打印出数据集信息
     try:
-        train_ds, val_ds, test_ds, meta = load_data()
+        training_data, validation_data, test_data, meta = load_data(val_ratio = 0.1, test_ratio = 0.1)
+
+        torch.save(training_data, 'saved_models/training_data.pt')
+        torch.save(validation_data, 'saved_models/validation_data.pt')
+        torch.save(test_data, 'saved_models/test_data.pt')
+        with open('saved_models/meta.json', 'w') as f: json.dump(meta, f)
+        
         # 打印每个子集样本数，帮助确认划分是否正确
-        print(f"  train: {len(train_ds)} samples")
-        print(f"  val:   {len(val_ds)} samples")
-        print(f"  test:  {len(test_ds)} samples")
+        print(f"  train: {len(training_data)} samples")
+        print(f"  val:   {len(validation_data)} samples")
+        print(f"  test:  {len(test_data)} samples")
         # 打印训练集第一个样本的输入/输出形状便于调试（若训练集为空则显示 None）
-        print("Input shape:", train_ds[0][0].shape if len(train_ds) else None)
-        print("Output shape:", train_ds[0][1].shape if len(train_ds) else None)
+        print("Input shape:", training_data[0][0].shape if len(training_data) else None)
+        print("Output shape:", training_data[0][1].shape if len(training_data) else None)
     except Exception:
         # 捕获并打印任何异常
         print("Self-test failed")

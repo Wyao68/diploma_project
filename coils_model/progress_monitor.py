@@ -7,6 +7,7 @@
 """
 
 # Standard library
+import os
 import json
 
 # Third-party libraries
@@ -148,7 +149,10 @@ def plot_training_progress(training_loss,
 
 if __name__ == "__main__":
     # 读取保存的训练/评估结果并生成图表
-    with open("saved_models\\training_progress.json", "r") as f:
+    base = os.path.dirname(os.path.dirname(__file__))
+    data_path = os.path.join(base, 'saved_models', 'training_progress.json')
+    
+    with open(data_path, "r") as f:
         training_loss, val_L_Max_relevant_errs, val_L_Avg_relevant_errs, val_R_Max_relevant_errs, val_R_Avg_relevant_errs,\
         validate_loss, tra_L_Max_relevant_errs, tra_L_Avg_relevant_errs, tra_R_Max_relevant_errs, tra_R_Avg_relevant_errs,\
         L_per_sample_errs, R_per_sample_errs = json.load(f)
