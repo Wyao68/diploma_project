@@ -135,7 +135,7 @@ def load_data(path: str | None = None,
 if __name__ == '__main__':
     # 设置随机种子以确保结果可复现
     np.random.seed(33)
-    # 作为脚本执行时，进行数据划分并打印出数据集信息
+    # 作为脚本执行时，进行数据划分并保存，打印出数据集信息
     try:
         training_data, validation_data, test_data, meta = load_data(val_ratio = 0.1, test_ratio = 0.1)
 

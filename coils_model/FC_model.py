@@ -118,7 +118,7 @@ class FullyConnectedNet(nn.Module):
         scheduler = ReduceLROnPlateau(
                         optimizer,
                         mode='min',           # 监控损失最小化
-                        factor=0.5,           # 学习率减半
+                        factor=0.5,           # 学习率变化系数
                         patience=5,           # 5个epoch无改善就调整
                         )
         
