@@ -169,13 +169,20 @@ class FullyConnectedNet(nn.Module):
                     t_L_rel_err = t_rel_err[:, 0] # 电感相对误差
                     t_R_rel_err = t_rel_err[:, 1] # 电阻相对误差
                     
-                    tra_L_Max_rel_err = max(tra_L_Max_rel_err, t_L_rel_err.max().item())
-                    tra_R_Max_rel_err = max(tra_R_Max_rel_err, t_R_rel_err.max().item())
+                    # 50轮训练后，相对误差大于3.0的样本被认为是异常值，不计入后续统计
+                    if epoch >= 50:                    
+                        valid_mask = (t_L_rel_err < 3.0) & (t_R_rel_err < 3.0)
+                        t_L_rel_err = t_L_rel_err[valid_mask]
+                        t_R_rel_err = t_R_rel_err[valid_mask]
+                    
+                    # 确保过滤后仍有样本参与统计，避免 max() 函数在空张量上抛出错误
+                    tra_L_Max_rel_err = max(tra_L_Max_rel_err, t_L_rel_err.max().item()) if t_L_rel_err.numel() > 0 else 0
+                    tra_R_Max_rel_err = max(tra_R_Max_rel_err, t_R_rel_err.max().item()) if t_R_rel_err.numel() > 0 else 0
 
                     tra_L_Avg_rel_err += t_L_rel_err.sum().item()
                     tra_R_Avg_rel_err += t_R_rel_err.sum().item()
                     
-                    tra_total += tx.size(0)
+                    tra_total += t_L_rel_err.size(0)
 
                 tra_loss = tra_loss / tra_total 
                 tra_L_Avg_rel_err = tra_L_Avg_rel_err / tra_total 
@@ -197,16 +204,22 @@ class FullyConnectedNet(nn.Module):
 
                     val_loss += v_loss.item() * vx.size(0)
                     v_rel_err = (v_outputs - vy).abs() / vy.abs()
+                    
                     v_L_rel_err = v_rel_err[:, 0]
                     v_R_rel_err = v_rel_err[:, 1]
+                    
+                    if epoch >= 50:                    
+                        valid_mask = (v_L_rel_err < 3.0) & (v_R_rel_err < 3.0)
+                        v_L_rel_err = v_L_rel_err[valid_mask]
+                        v_R_rel_err = v_R_rel_err[valid_mask]
 
-                    val_L_Max_rel_err = max(val_L_Max_rel_err, v_L_rel_err.max().item())
-                    val_R_Max_rel_err = max(val_R_Max_rel_err, v_R_rel_err.max().item())
+                    val_L_Max_rel_err = max(val_L_Max_rel_err, v_L_rel_err.max().item()) if v_L_rel_err.numel() > 0 else 0
+                    val_R_Max_rel_err = max(val_R_Max_rel_err, v_R_rel_err.max().item()) if v_R_rel_err.numel() > 0 else 0
 
                     val_L_Avg_rel_err += v_L_rel_err.sum().item()
                     val_R_Avg_rel_err += v_R_rel_err.sum().item()
                     
-                    val_total += vx.size(0)
+                    val_total += v_L_rel_err.size(0)
 
                 val_loss = val_loss / val_total 
                 val_L_Avg_rel_err = val_L_Avg_rel_err / val_total 
@@ -225,7 +238,7 @@ class FullyConnectedNet(nn.Module):
             print(f"Epoch {epoch:02d} - "
                   f"Training Loss: {tra_loss:.4f}")
         
-        # 在最后一个epoch结束后，计算并保存验证集每个样本的相对误差
+        # 在最后一个epoch结束后，计算并保存验证集每个样本的相对误差（通过调用模型的方式把这一步移动到outlier_detect.py里面）
         with torch.no_grad():
             for xb, yb in val_loader:
                 xb = xb.to(device)

@@ -185,7 +185,7 @@ if __name__ == '__main__':
     RANDOM_SEED = set_random_seed()
     
     parser = argparse.ArgumentParser(description="使用 Optuna 对全连接网络做超参数搜索（最小示例）")
-    parser.add_argument("--trials", type=int, default=200, help="Optuna trials 数量")
+    parser.add_argument("--trials", type=int, default=300, help="Optuna trials 数量")
     parser.add_argument("--epochs", type=int, default=150, help="每个 trial 的训练 epoch 数")
     parser.add_argument("--batch_size", type=int, default=64, help="训练批大小")
     parser.add_argument("--training_data_size", type=int, default=None, help="用于训练的样本数量(None 表示全部）")
