@@ -110,16 +110,18 @@ class FullyConnectedNet(nn.Module):
         # 优化器
         optimizer = optim.AdamW(
                        self.parameters(),
-                       lr=lr,             # 学习率
-                       weight_decay=weight_decay,   # L2正则化系数
+                       lr=lr,           
+                       weight_decay=weight_decay,  
                        )    
            
-        #学习率调度器(暂时先不用)
+        #学习率调度器
         scheduler = ReduceLROnPlateau(
                         optimizer,
-                        mode='min',           # 监控损失最小化
-                        factor=0.5,           # 学习率变化系数
-                        patience=5,           # 5个epoch无改善就调整
+                        mode='min',     
+                        factor=0.5,       
+                        patience=5, 
+                        threshold=1e-4,
+                        threshold_mode='rel'          
                         )
         
         # 训练与验证循环
@@ -217,7 +219,7 @@ class FullyConnectedNet(nn.Module):
                 val_R_Avg_relevant_errs.append(val_R_Avg_rel_err)
 
             # 学习率调度器根据验证集的结果调整学习率
-            # scheduler.step(val_loss) 
+            scheduler.step(val_loss) 
 
             # 打印本轮训练结果
             print(f"Epoch {epoch:02d} - "
@@ -237,7 +239,6 @@ class FullyConnectedNet(nn.Module):
 
             L_per_sample_errs = np.concatenate(L_per_sample_errs, axis=0).tolist()
             R_per_sample_errs = np.concatenate(R_per_sample_errs, axis=0).tolist()
-
 
         base = os.path.dirname(os.path.dirname(__file__))
         # 保存模型参数字典
