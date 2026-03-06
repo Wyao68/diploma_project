@@ -114,7 +114,7 @@ class FullyConnectedNet(nn.Module):
                        weight_decay=weight_decay,   # L2正则化系数
                        )    
            
-        #学习率调度器
+        #学习率调度器(暂时先不用)
         scheduler = ReduceLROnPlateau(
                         optimizer,
                         mode='min',           # 监控损失最小化
@@ -217,7 +217,7 @@ class FullyConnectedNet(nn.Module):
                 val_R_Avg_relevant_errs.append(val_R_Avg_rel_err)
 
             # 学习率调度器根据验证集的结果调整学习率
-            scheduler.step(val_loss) 
+            # scheduler.step(val_loss) 
 
             # 打印本轮训练结果
             print(f"Epoch {epoch:02d} - "

@@ -41,7 +41,7 @@ def objective(trial: optuna.trial.Trial, epochs: int = 20, batch_size: int = 64,
 
     - 从数据加载器获取训练/验证集
     - 根据 trial 采样网络结构与学习率
-    - 用一个精简训练循环训练若干 epoch，并返回最后一个 epoch 的验证集平均损失（MSE）
+    - 用一个精简训练循环训练若干 epoch，并返回最后一个 epoch 的验证集平均损失(MSE)
     - 使用 AdamW 优化器与 MSELoss
     - 在每个 epoch 后向 Optuna 报告中间值并支持剪枝
     
@@ -49,6 +49,7 @@ def objective(trial: optuna.trial.Trial, epochs: int = 20, batch_size: int = 64,
     - 隐藏层数量
     - 每层单独采样神经元数量
     - adamW学习率
+    - dropout率
     """
 
     # 加载数据
@@ -156,10 +157,23 @@ def run_study(n_trials: int = 20, epochs: int = 20, batch_size: int = 64, traini
         print(f"    {k}: {v}")
 
 
+def set_random_seed(seed=33):
+    """设置所有随机种子，以确保结果可复现"""
+    torch.manual_seed(seed)
+    
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    return seed
+
+
 if __name__ == '__main__':
+    RANDOM_SEED = set_random_seed()
+    
     parser = argparse.ArgumentParser(description="使用 Optuna 对全连接网络做超参数搜索（最小示例）")
-    parser.add_argument("--trials", type=int, default=50, help="Optuna trials 数量")
-    parser.add_argument("--epochs", type=int, default=50, help="每个 trial 的训练 epoch 数")
+    parser.add_argument("--trials", type=int, default=200, help="Optuna trials 数量")
+    parser.add_argument("--epochs", type=int, default=100, help="每个 trial 的训练 epoch 数")
     parser.add_argument("--batch_size", type=int, default=64, help="训练批大小")
     parser.add_argument("--training_data_size", type=int, default=None, help="用于训练的样本数量(None 表示全部）")
     args = parser.parse_args()

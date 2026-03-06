@@ -30,7 +30,7 @@ def _default_data_path() -> str:
 
 
 def load_data(path: str | None = None,
-                input_cols: int = 5,
+                input_cols: int = 8,
                 output_cols: int = 3,
                 normalize: bool = True,
                 val_ratio: float = 0.1,

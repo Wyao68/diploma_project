@@ -169,6 +169,6 @@ if __name__ == "__main__":
                             tra_R_Avg_relevant_errs,
                             L_per_sample_errs, 
                             R_per_sample_errs,
-                            x_min=0)  
+                            x_min=50)  
     
     print("Training progress plots generated successfully.")
