@@ -26,8 +26,6 @@ def plot_training_progress(training_loss,
                             tra_L_Avg_relevant_errs, 
                             tra_R_Max_relevant_errs, 
                             tra_R_Avg_relevant_errs,
-                            L_per_sample_errs, 
-                            R_per_sample_errs,
                             x_min=50):
     
     # 绘制训练过程中的各项指标变化曲线
@@ -105,43 +103,6 @@ def plot_training_progress(training_loss,
     ax6.set_ylabel('Average Relevant Error (%)')
     ax6.set_title('Average Rel Error on val & tra data')
     ax6.legend(loc='upper right')
-
-    fig2 = plt.figure(figsize=(12, 9))
-    
-    # 绘制电感的误差竖线图
-    ax7 = fig2.add_subplot(211)
-    # 使用vlines绘制竖线：x位置，y起点，y终点
-    ax7.vlines(np.arange(0, len(L_per_sample_errs)), 
-            ymin=0, 
-            ymax=list(map(lambda x: x*100, L_per_sample_errs)),
-            color="#0A14DA", 
-            linewidth=1.5)
-    ax7.set_xlim([0, len(L_per_sample_errs)])
-    ax7.grid(True, alpha=0.3)
-    ax7.set_xlabel('Sample Index')
-    ax7.set_ylabel('Relative Error (%)')
-    ax7.set_title("Model's Relative Error on Inductance (L) Prediction")
-    # 统计信息
-    ax7.axhline(y=np.mean(L_per_sample_errs)*100, color='green', linestyle='--', 
-            label=f'Mean: {np.mean(L_per_sample_errs)*100:.2f}%')
-    ax7.legend()
-    
-    # 绘制电阻的误差竖线图
-    ax8 = fig2.add_subplot(212)
-    ax8.vlines(np.arange(0, len(R_per_sample_errs)), 
-            ymin=0, 
-            ymax=list(map(lambda x: x*100, R_per_sample_errs)),
-            color="#DA0A0A", 
-            linewidth=1.5)
-    ax8.set_xlim([0, len(R_per_sample_errs)])
-    ax8.grid(True, alpha=0.3)
-    ax8.set_xlabel('Sample Index')
-    ax8.set_ylabel('Relative Error (%)')
-    ax8.set_title("Model's Relative Error on Resistance (R) Prediction")
-    # 统计信息
-    ax8.axhline(y=np.mean(R_per_sample_errs)*100, color='green', linestyle='--',
-            label=f'Mean: {np.mean(R_per_sample_errs)*100:.2f}%')
-    ax8.legend()
     
     plt.tight_layout()
     plt.show()
@@ -154,8 +115,7 @@ if __name__ == "__main__":
     
     with open(data_path, "r") as f:
         training_loss, val_L_Max_relevant_errs, val_L_Avg_relevant_errs, val_R_Max_relevant_errs, val_R_Avg_relevant_errs,\
-        validate_loss, tra_L_Max_relevant_errs, tra_L_Avg_relevant_errs, tra_R_Max_relevant_errs, tra_R_Avg_relevant_errs,\
-        L_per_sample_errs, R_per_sample_errs = json.load(f)
+        validate_loss, tra_L_Max_relevant_errs, tra_L_Avg_relevant_errs, tra_R_Max_relevant_errs, tra_R_Avg_relevant_errs = json.load(f)
 
     plot_training_progress(training_loss, 
                             val_L_Max_relevant_errs, 
@@ -167,8 +127,6 @@ if __name__ == "__main__":
                             tra_L_Avg_relevant_errs,
                             tra_R_Max_relevant_errs,
                             tra_R_Avg_relevant_errs,
-                            L_per_sample_errs, 
-                            R_per_sample_errs,
                             x_min=50)  
     
     print("Training progress plots generated successfully.")

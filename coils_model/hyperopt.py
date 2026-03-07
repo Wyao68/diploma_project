@@ -29,6 +29,17 @@ except Exception:
     from FC_model import FullyConnectedNet
     from data_processor import load_data
 
+def set_random_seed(seed=33):
+    """设置所有随机种子，以确保结果可复现"""
+    torch.manual_seed(seed)
+    
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    return seed
+
+RANDOM_SEED = set_random_seed()
 
 def build_net_dims(input_dim: int, output_dim: int, hidden_units: list[int]) -> list[int]:
     """根据输入维度、输出维度和隐藏层单元列表构建 net_dims 列表:
@@ -69,8 +80,8 @@ def objective(trial: optuna.trial.Trial, epochs: int = 20, batch_size: int = 64,
     output_dim = train_ds[0][1].shape[0]
 
     # 采样超参数
-    # 隐藏层数量，1-4层
-    n_hidden = trial.suggest_int("n_hidden", 1, 4)
+    # 隐藏层数量，2-4层
+    n_hidden = trial.suggest_int("n_hidden", 2, 4)
     hidden_units = []
     for i in range(n_hidden):
         # 每层神经元数量，8-256个，使用对数尺度均匀采样
@@ -154,7 +165,7 @@ def run_study(n_trials: int = 20, epochs: int = 20, batch_size: int = 64, traini
     """
     运行 Optuna study 并打印最优结果。
     """
-    sampler = optuna.samplers.TPESampler()
+    sampler = optuna.samplers.TPESampler(seed=RANDOM_SEED)  # 使用 TPE 采样器并设置随机种子
     study = optuna.create_study(direction="minimize", sampler=sampler)
 
     try:
@@ -170,20 +181,7 @@ def run_study(n_trials: int = 20, epochs: int = 20, batch_size: int = 64, traini
         print(f"    {k}: {v}")
 
 
-def set_random_seed(seed=33):
-    """设置所有随机种子，以确保结果可复现"""
-    torch.manual_seed(seed)
-    
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-    return seed
-
-
-if __name__ == '__main__':
-    RANDOM_SEED = set_random_seed()
-    
+if __name__ == '__main__':  
     parser = argparse.ArgumentParser(description="使用 Optuna 对全连接网络做超参数搜索（最小示例）")
     parser.add_argument("--trials", type=int, default=300, help="Optuna trials 数量")
     parser.add_argument("--epochs", type=int, default=150, help="每个 trial 的训练 epoch 数")

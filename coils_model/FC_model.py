@@ -73,8 +73,6 @@ class FullyConnectedNet(nn.Module):
         - tra_L_Avg_relevant_errs: 训练集电感平均相对误差列表
         - tra_R_Max_relevant_errs: 训练集电阻最大相对误差列表
         - tra_R_Avg_relevant_errs: 训练集电阻平均相对误差列表
-        - L_per_sample_errs: 验证集每个样本电感相对误差列表
-        - R_per_sample_errs: 验证集每个样本电阻相对误差列表
         '''
         # 创建损失与误差列表
         training_loss = []
@@ -87,8 +85,6 @@ class FullyConnectedNet(nn.Module):
         tra_L_Avg_relevant_errs = []
         tra_R_Max_relevant_errs = []
         tra_R_Avg_relevant_errs = []
-        L_per_sample_errs = []
-        R_per_sample_errs = []
 
         # 数据加载
         if training_data_size is not None:
@@ -237,21 +233,6 @@ class FullyConnectedNet(nn.Module):
             # 打印本轮训练结果
             print(f"Epoch {epoch:02d} - "
                   f"Training Loss: {tra_loss:.4f}")
-        
-        # 在最后一个epoch结束后，计算并保存验证集每个样本的相对误差（通过调用模型的方式把这一步移动到outlier_detect.py里面）
-        with torch.no_grad():
-            for xb, yb in val_loader:
-                xb = xb.to(device)
-                yb = yb.to(device)
-                preds = self.model(xb)
-                rel = (preds - yb).abs() / yb.abs()
-                L_per_sample = rel[:, 0]
-                R_per_sample = rel[:, 1]
-                L_per_sample_errs.append(L_per_sample.cpu().numpy())
-                R_per_sample_errs.append(R_per_sample.cpu().numpy())
-
-            L_per_sample_errs = np.concatenate(L_per_sample_errs, axis=0).tolist()
-            R_per_sample_errs = np.concatenate(R_per_sample_errs, axis=0).tolist()
 
         base = os.path.dirname(os.path.dirname(__file__))
         # 保存模型参数字典
@@ -264,7 +245,6 @@ class FullyConnectedNet(nn.Module):
                         val_R_Max_relevant_errs, val_R_Avg_relevant_errs, \
                         validate_loss, \
                         tra_L_Max_relevant_errs, tra_L_Avg_relevant_errs, \
-                        tra_R_Max_relevant_errs, tra_R_Avg_relevant_errs, \
-                        L_per_sample_errs, R_per_sample_errs], f)
+                        tra_R_Max_relevant_errs, tra_R_Avg_relevant_errs], f)
 
     

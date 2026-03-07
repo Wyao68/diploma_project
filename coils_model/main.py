@@ -35,8 +35,8 @@ if __name__ == "__main__":
     training_ds = torch.load(os.path.join(data_path, 'training_data.pt'), weights_only=False)
     test_ds = torch.load(os.path.join(data_path, 'test_data.pt'), weights_only=False)
 
-    net = FC_model.FullyConnectedNet([8, 18, 179, 2], dropout_p=0.0)
+    net = FC_model.FullyConnectedNet([8, 67, 199, 10, 2], dropout_p=0.0)
     
-    net.running(training_ds, test_ds, epochs=150, batch_size=64, lr = 0.077, weight_decay = 7.26e-6)
+    net.running(training_ds, test_ds, epochs=150, batch_size=64, lr = 0.002, weight_decay = 0.0023)
 
     
