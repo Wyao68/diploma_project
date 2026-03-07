@@ -36,6 +36,9 @@ class FullyConnectedNet(nn.Module):
 
         self._init_weights()
 
+    def forward(self, x):
+        return self.model(x)
+
     def _init_weights(self):
         # 对 ReLU 使用 Kaiming 初始化以保持前向方差稳定
         for layer in self.modules():
