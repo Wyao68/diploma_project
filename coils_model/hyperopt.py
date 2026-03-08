@@ -13,6 +13,7 @@
 """
 
 import os
+import json
 import argparse # 命令行参数解析（接口）
 import optuna
 
@@ -21,13 +22,8 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-# 作为包运行时相对导入，直接运行时绝对导入
-try:
-    from .FC_model import FullyConnectedNet
-    from .data_processor import load_data
-except Exception:
-    from FC_model import FullyConnectedNet
-    from data_processor import load_data
+from FC_model import FullyConnectedNet
+from data_processor import load_data
 
 def set_random_seed(seed=33):
     """设置所有随机种子，以确保结果可复现"""
@@ -62,6 +58,7 @@ def objective(trial: optuna.trial.Trial, epochs: int = 20, batch_size: int = 64,
     - 每层单独采样神经元数量
     - adamW学习率
     - 权重衰减系数
+    - dropout率
     """
 
     # 加载数据
@@ -92,12 +89,14 @@ def objective(trial: optuna.trial.Trial, epochs: int = 20, batch_size: int = 64,
     lr = trial.suggest_float("lr", 1e-5, 1e-1, log=True)
     # 权重衰减系数，1e-6 到 1e-2，使用对数尺度均匀采样
     weight_decay = trial.suggest_float("weight_decay", 1e-6, 1e-2, log=True)
+    # dropout率，0.0 到 0.2，使用线性尺度均匀采样
+    dropout_p = trial.suggest_float("dropout_p", 0.0, 0.2)
 
     net_dims = build_net_dims(input_dim, output_dim, hidden_units)
 
     # 构建模型并移动到设备（优先 GPU）
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = FullyConnectedNet(net_dims)
+    model = FullyConnectedNet(net_dims, dropout_p=dropout_p)
     model.to(device)
 
     # 加载数据到 DataLoader，支持可选的训练数据子集大小用于快速测试
@@ -163,7 +162,7 @@ def objective(trial: optuna.trial.Trial, epochs: int = 20, batch_size: int = 64,
 
 def run_study(n_trials: int = 20, epochs: int = 20, batch_size: int = 64, training_data_size: int | None = None):
     """
-    运行 Optuna study 并打印最优结果。
+    运行 Optuna study 保存并打印最优结果。
     """
     sampler = optuna.samplers.TPESampler(seed=RANDOM_SEED)  # 使用 TPE 采样器并设置随机种子
     study = optuna.create_study(direction="minimize", sampler=sampler)
@@ -172,6 +171,13 @@ def run_study(n_trials: int = 20, epochs: int = 20, batch_size: int = 64, traini
         study.optimize(lambda t: objective(t, epochs=epochs, batch_size=batch_size, training_data_size=training_data_size), n_trials=n_trials)
     except KeyboardInterrupt:
         print("用户中断，停止优化。")
+        
+    # 将最好的超参数保存到 JSON 文件
+    best_params = study.best_trial.params
+    base = os.path.dirname(os.path.dirname(__file__))
+    data_path = os.path.join(base, 'saved_models')
+    with open(os.path.join(data_path, 'best_hyperparams.json'), 'w') as f:
+        json.dump(best_params, f, indent=4)
 
     print("Best trial:")
     trial = study.best_trial
@@ -190,3 +196,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     run_study(n_trials=args.trials, epochs=args.epochs, batch_size=args.batch_size, training_data_size=args.training_data_size)
+    
+    # 运行示例：python coils_model\hyperopt.py --trials 30 --epochs 20

@@ -98,6 +98,18 @@ def main():
         L_per_sample_errs = np.abs(L_pred - L_true) / np.abs(L_true)
         R_per_sample_errs = np.abs(R_pred - R_true) / np.abs(R_true)
 
+    # 将相对误差大于100%的样本标记为异常值，打印样本输入和对应的真实/预测值
+    x_ori = x_test.cpu().numpy() * np.array(meta['x_std']) + np.array(meta['x_mean'])
+    
+    outlier_indices = np.where((L_per_sample_errs > 1.0) | (R_per_sample_errs > 1.0))[0]
+    print(f"Detected {len(outlier_indices)} outliers with relative error > 100%:")
+    for idx in outlier_indices:
+        print(f"Sample Index: {idx}")
+        print(f"Input Features: {x_ori[idx]}")
+        print(f"True L: {L_true[idx]:.4f}, Predicted L: {L_pred[idx]:.4f}, Relative Error: {L_per_sample_errs[idx]*100:.2f}%")
+        print(f"True R: {R_true[idx]:.4f}, Predicted R: {R_pred[idx]:.4f}, Relative Error: {R_per_sample_errs[idx]*100:.2f}%")
+        print("-" * 50)
+
     # 绘制误差竖线图
     plot(L_per_sample_errs, R_per_sample_errs)
     
