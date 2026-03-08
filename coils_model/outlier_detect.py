@@ -15,7 +15,7 @@ def load_data():
     return torch.load(os.path.join(data_path, 'test_data.pt'), weights_only=False)
 
 
-def load_model(state_path: str, net_dims: list[int], device: torch.device) -> tuple[torch.nn.Module, dict]:
+def load_model(state_path: str, net_dims: list[int], dropout_p: float, device: torch.device) -> tuple[torch.nn.Module, dict]:
     """加载模型与训练时的数据统计信息。
     
     参数说明：
@@ -27,7 +27,7 @@ def load_model(state_path: str, net_dims: list[int], device: torch.device) -> tu
       - meta: 元数据字典，包含标准化所需的统计量。
       
     """
-    model = FC_model.FullyConnectedNet(net_dims)
+    model = FC_model.FullyConnectedNet(net_dims, dropout_p=dropout_p)
 
     # 加载模型权重
     model.load_state_dict(torch.load(state_path, map_location=device))
@@ -36,6 +36,7 @@ def load_model(state_path: str, net_dims: list[int], device: torch.device) -> tu
     with open(os.path.join(data_path, 'meta.json'), "r") as f: meta = json.load(f)
 
     return model.to(device), meta
+
 
 def plot(L_per_sample_errs: np.ndarray, R_per_sample_errs: np.ndarray):
     fig1 = plt.figure(figsize=(12, 9))
@@ -77,10 +78,11 @@ def plot(L_per_sample_errs: np.ndarray, R_per_sample_errs: np.ndarray):
     
     plt.show()
 
+
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # 加载模型数据
-    model, meta = load_model(os.path.join(data_path, 'coils_model_state_dict.pt'), [8, 67, 199, 10, 2], device=device)
+    model, meta = load_model(os.path.join(data_path, 'coils_model_state_dict.pt'), [8, 217, 83, 2], dropout_p=0.0787, device=device)
     test_ds = load_data()
     
     # 在测试集上评估模型并计算每个样本的相对误差

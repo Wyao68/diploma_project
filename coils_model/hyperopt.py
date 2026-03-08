@@ -49,7 +49,7 @@ def objective(trial: optuna.trial.Trial, epochs: int = 20, batch_size: int = 64,
 
     - 从数据加载器获取训练/验证集
     - 根据 trial 采样网络结构与学习率
-    - 用一个精简训练循环训练若干 epoch，并返回最后一个 epoch 的验证集平均损失(MSE)
+    - 用一个精简训练循环训练若干 epoch，并返回最后一个 epoch 的验证集平均损失
     - 使用 AdamW 优化器与 MSELoss
     - 在每个 epoch 后向 Optuna 报告中间值并支持剪枝
     
@@ -77,26 +77,26 @@ def objective(trial: optuna.trial.Trial, epochs: int = 20, batch_size: int = 64,
     output_dim = train_ds[0][1].shape[0]
 
     # 采样超参数
-    # 隐藏层数量，2-4层
+    # 隐藏层数量
     n_hidden = trial.suggest_int("n_hidden", 2, 4)
+    
+    # 每层单独采样神经元数量
     hidden_units = []
     for i in range(n_hidden):
-        # 每层神经元数量，8-256个，使用对数尺度均匀采样
         units = trial.suggest_int(f"n_units_layer{i}", 8, 256, log=True)
         hidden_units.append(units)
 
-    # 学习率，1e-5 到 1e-1，使用对数尺度均匀采样
+    # 学习率和权重衰减
     lr = trial.suggest_float("lr", 1e-5, 1e-1, log=True)
-    # 权重衰减系数，1e-6 到 1e-2，使用对数尺度均匀采样
     weight_decay = trial.suggest_float("weight_decay", 1e-6, 1e-2, log=True)
-    # dropout率，0.0 到 0.2，使用线性尺度均匀采样
+    
+    # 采样 dropout 率
     dropout_p = trial.suggest_float("dropout_p", 0.0, 0.2)
 
-    net_dims = build_net_dims(input_dim, output_dim, hidden_units)
-
     # 构建模型并移动到设备（优先 GPU）
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    net_dims = build_net_dims(input_dim, output_dim, hidden_units)
     model = FullyConnectedNet(net_dims, dropout_p=dropout_p)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  
     model.to(device)
 
     # 加载数据到 DataLoader，支持可选的训练数据子集大小用于快速测试
@@ -109,17 +109,21 @@ def objective(trial: optuna.trial.Trial, epochs: int = 20, batch_size: int = 64,
 
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
 
-    # 损失、优化器、学习率调度器
+    # 损失、优化器、学习率调度器（这里的配置需始终保持与FC_model中一致）
     criterion = nn.MSELoss()
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay) 
+    
+    optimizer = torch.optim.AdamW(
+                model.parameters(), 
+                lr=lr, 
+                weight_decay=weight_decay) 
+    
     scheduler = ReduceLROnPlateau(
                 optimizer,
                 mode='min',     
                 factor=0.5,       
-                patience=5, 
+                patience=8, 
                 threshold=1e-4,
-                threshold_mode='rel'           
-                )
+                threshold_mode='rel')
     
     # 训练循环
     for epoch in range(1, epochs + 1):
@@ -204,6 +208,8 @@ if __name__ == '__main__':
     parser.add_argument("--training_data_size", type=int, default=None, help="用于训练的样本数量(None 表示全部）")
     args = parser.parse_args()
 
-    run_study(n_trials=args.trials, epochs=args.epochs, batch_size=args.batch_size, training_data_size=args.training_data_size)
+    for i in range(1, 6):
+        print(f"正在运行第 {i} 轮超参数优化...")
+        run_study(n_trials=args.trials, epochs=args.epochs, batch_size=args.batch_size, training_data_size=args.training_data_size)
     
     # 运行示例：python coils_model\hyperopt.py --trials 30 --epochs 20
