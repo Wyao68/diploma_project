@@ -1,9 +1,9 @@
 {
-    "n_hidden": 3,
-    "n_units_layer0": 12,
-    "n_units_layer1": 163,
-    "n_units_layer2": 17,
-    "lr": 0.010157026203101029,
-    "weight_decay": 0.009067065339726005,
-    "dropout_p": 0.05859766308557911
+    "n_hidden": 2,
+    "n_units_layer0": 221,
+    "n_units_layer1": 81,
+    "lr": 0.015230951182983236,
+    "weight_decay": 0.006891121559147049,
+    "dropout_p": 0.06055082956475067,
+    "value": 0.16435077760973546
 }

@@ -172,12 +172,21 @@ def run_study(n_trials: int = 20, epochs: int = 20, batch_size: int = 64, traini
     except KeyboardInterrupt:
         print("用户中断，停止优化。")
         
-    # 将最好的超参数保存到 JSON 文件
-    best_params = study.best_trial.params
+    # 每次将study的value一起保存，并把得到的本次最佳超参数与 JSON 文件中已有的超参数进行比较，如果更好则更新 JSON 文件
+    best_params = study.best_trial.params # dict[str, Any]
     base = os.path.dirname(os.path.dirname(__file__))
-    data_path = os.path.join(base, 'saved_models')
-    with open(os.path.join(data_path, 'best_hyperparams.json'), 'w') as f:
-        json.dump(best_params, f, indent=4)
+    best_file = os.path.join(base, 'saved_models', 'best_hyperparams.json')
+    
+    if os.path.exists(best_file):
+        with open(best_file, 'r') as f:
+            best_data = json.load(f)
+    else:
+        best_data = {}
+
+    if study.best_trial.value < best_data.get('value', float('inf')):   # get('value', float('inf')) 确保如果文件不存在或没有 value 键时，默认值为无穷大
+        best_params['value'] = study.best_trial.value
+        with open(best_file, 'w') as f:
+            json.dump(best_params, f, indent=4)
 
     print("Best trial:")
     trial = study.best_trial
@@ -189,7 +198,7 @@ def run_study(n_trials: int = 20, epochs: int = 20, batch_size: int = 64, traini
 
 if __name__ == '__main__':  
     parser = argparse.ArgumentParser(description="使用 Optuna 对全连接网络做超参数搜索（最小示例）")
-    parser.add_argument("--trials", type=int, default=300, help="Optuna trials 数量")
+    parser.add_argument("--trials", type=int, default=100, help="Optuna trials 数量")
     parser.add_argument("--epochs", type=int, default=150, help="每个 trial 的训练 epoch 数")
     parser.add_argument("--batch_size", type=int, default=64, help="训练批大小")
     parser.add_argument("--training_data_size", type=int, default=None, help="用于训练的样本数量(None 表示全部）")

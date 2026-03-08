@@ -55,7 +55,7 @@ class FullyConnectedNet(nn.Module):
                 lr = 1e-2,
                 weight_decay = 1e-4):
         '''
-        执行训练过程并保存训练过程信息以便可视化
+        执行完整训练过程并保存训练过程信息以便可视化
         
         参数说明：
         - train_ds: 训练集
@@ -117,7 +117,7 @@ class FullyConnectedNet(nn.Module):
                         optimizer,
                         mode='min',     
                         factor=0.5,       
-                        patience=5, 
+                        patience=8, 
                         threshold=1e-4,
                         threshold_mode='rel'          
                         )
