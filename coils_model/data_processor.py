@@ -137,7 +137,7 @@ if __name__ == '__main__':
     np.random.seed(33)
     # 作为脚本执行时，进行数据划分并保存，打印出数据集信息
     try:
-        training_data, validation_data, test_data, meta = load_data(val_ratio = 0.1, test_ratio = 0.1)
+        training_data, validation_data, test_data, meta = load_data(input_cols=7, output_cols=3, normalize=True, val_ratio = 0.1, test_ratio = 0.1)
 
         torch.save(training_data, 'saved_models/training_data.pt')
         torch.save(validation_data, 'saved_models/validation_data.pt')
