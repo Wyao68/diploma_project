@@ -23,7 +23,6 @@ from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from FC_model import FullyConnectedNet
-from data_processor import load_data
 
 def set_random_seed(seed=33):
     """设置所有随机种子，以确保结果可复现"""
@@ -44,7 +43,7 @@ def build_net_dims(input_dim: int, output_dim: int, hidden_units: list[int]) -> 
     return [input_dim] + hidden_units + [output_dim]
 
 
-def objective(trial: optuna.trial.Trial, epochs: int = 20, batch_size: int = 64, training_data_size: int | None = None) -> float:
+def objective(trial: optuna.trial.Trial, epochs: int = 100, batch_size: int = 64, training_data_size: int | None = None) -> float:
     """Optuna 的目标函数：
 
     - 从数据加载器获取训练/验证集
@@ -60,7 +59,6 @@ def objective(trial: optuna.trial.Trial, epochs: int = 20, batch_size: int = 64,
     - 权重衰减系数
     - dropout率
     """
-
     # 加载数据
     base = os.path.dirname(os.path.dirname(__file__))
     data_path = os.path.join(base, 'saved_models')
@@ -164,13 +162,23 @@ def objective(trial: optuna.trial.Trial, epochs: int = 20, batch_size: int = 64,
     return float(val_loss)
 
 
-def run_study(n_trials: int = 20, epochs: int = 20, batch_size: int = 64, training_data_size: int | None = None):
+def run_study(n_trials: int = 100, epochs: int = 100, batch_size: int = 64, training_data_size: int | None = None):
     """
     运行 Optuna study 保存并打印最优结果。
     """
-    sampler = optuna.samplers.TPESampler(seed=RANDOM_SEED)  # 使用 TPE 采样器并设置随机种子
-    study = optuna.create_study(direction="minimize", sampler=sampler)
-
+    # 使用 TPE 采样器，初始试验数为 30，并设置随机种子以确保结果可复现
+    sampler = optuna.samplers.TPESampler(
+                n_startup_trials=30, 
+                multivariate=False, 
+                seed=RANDOM_SEED) 
+    # 启用中位数剪枝器
+    pruner = optuna.pruners.MedianPruner(
+                n_startup_trials=30,    # 前30次trial不剪枝
+                n_warmup_steps=10,      # 每个trial前10步不剪枝
+                interval_steps=5        # 每5步检查一次
+                )  
+    study = optuna.create_study(direction="minimize", sampler=sampler, pruner=pruner)
+    
     try:
         study.optimize(lambda t: objective(t, epochs=epochs, batch_size=batch_size, training_data_size=training_data_size), n_trials=n_trials)
     except KeyboardInterrupt:
@@ -202,13 +210,13 @@ def run_study(n_trials: int = 20, epochs: int = 20, batch_size: int = 64, traini
 
 if __name__ == '__main__':  
     parser = argparse.ArgumentParser(description="使用 Optuna 对全连接网络做超参数搜索（最小示例）")
-    parser.add_argument("--trials", type=int, default=100, help="Optuna trials 数量")
+    parser.add_argument("--trials", type=int, default=150, help="Optuna trials 数量")
     parser.add_argument("--epochs", type=int, default=150, help="每个 trial 的训练 epoch 数")
     parser.add_argument("--batch_size", type=int, default=64, help="训练批大小")
     parser.add_argument("--training_data_size", type=int, default=None, help="用于训练的样本数量(None 表示全部）")
     args = parser.parse_args()
 
-    for i in range(1, 6):
+    for i in range(1, 2):
         print(f"正在运行第 {i} 轮超参数优化...")
         run_study(n_trials=args.trials, epochs=args.epochs, batch_size=args.batch_size, training_data_size=args.training_data_size)
     
