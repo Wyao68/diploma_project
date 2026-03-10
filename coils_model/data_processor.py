@@ -18,6 +18,7 @@ import os
 import json
 
 import numpy as np 
+import pandas as pd
 import torch 
 from torch.utils.data import TensorDataset 
 
@@ -30,7 +31,7 @@ def _default_data_path() -> str:
 
 
 def load_data(path: str | None = None,
-                input_cols: int = 8,
+                input_cols: int = 5,
                 output_cols: int = 3,
                 normalize: bool = True,
                 val_ratio: float = 0.1,
@@ -38,7 +39,7 @@ def load_data(path: str | None = None,
     """加载数据并返回 Train/Val/Test: TensorDataset。
 
     参数说明：
-      - path: CSV 文件路径，默认使用模块内置数据路径。
+      - path: xlsx 文件路径，默认使用模块内置数据路径。
       - input_cols: 输入特征列数(从左侧开始)，默认 5。
       - output_cols: 输出列数(从右侧开始，且不包含最后一列)，默认 3。
       - normalize: 是否对输入做标准化(均值 0、方差 1)。
@@ -57,26 +58,26 @@ def load_data(path: str | None = None,
     if not os.path.exists(path):
         raise FileNotFoundError(f"directory not found: {path}")
 
-    # 读取路径中所有 CSV 文件路径位置
+    # 读取路径中所有 XLSX 文件路径位置
     if os.path.isdir(path):
-        csv_files = sorted([os.path.join(path, fn) for fn in os.listdir(path)
-                            if fn.lower().endswith('.csv')])
-        if not csv_files:
-            raise FileNotFoundError(f"No CSV files found in directory: {path}")
+        xlsx_files = sorted([os.path.join(path, fn) for fn in os.listdir(path)
+                             if fn.lower().endswith('.xlsx')])
+        if not xlsx_files:
+            raise FileNotFoundError(f"No XLSX files found in directory: {path}")
 
         parts = []
-        for fn in csv_files:
-            part = np.genfromtxt(fn, delimiter=',', dtype=float, skip_header=1) # 跳过表头（fn为文件路径）
-            parts.append(part)
+        for fn in xlsx_files:
+            part = pd.read_excel(fn, header=0) # 读取Excel文件，fn为文件路径，header=0表示第一行作为列名
+            parts.append(part.values) # 将DataFrame转换为NumPy数组并添加到列表中
 
-        # 检查每个 CSV 文件的列数是否一致
+        # 检查每个 XLSX 文件的列数是否一致
         cols = [p.shape[1] for p in parts]
         if len(set(cols)) != 1:
-            raise ValueError(f"CSV files in directory have inconsistent column counts: {cols}")
-
+            raise ValueError(f"XLSX files in directory have inconsistent column counts: {cols}")
+        
         data = np.vstack(parts)     # 合成为一个大数组
         meta: dict = {'raw_data': data.tolist()} # 创建meta，使用Python基础数据格式保存
-        print(f"Loaded {len(parts)} CSV files, total shape: {data.shape}")
+        print(f"Loaded {len(parts)} XLSX files, total shape: {data.shape}")
 
     # 将数据类型转换为 float32，以匹配 PyTorch 的默认精度
     X = data[:, :input_cols].astype(np.float32)
@@ -137,7 +138,7 @@ if __name__ == '__main__':
     np.random.seed(33)
     # 作为脚本执行时，进行数据划分并保存，打印出数据集信息
     try:
-        training_data, validation_data, test_data, meta = load_data(input_cols=7, output_cols=3, normalize=True, val_ratio = 0.1, test_ratio = 0.1)
+        training_data, validation_data, test_data, meta = load_data(input_cols=5, output_cols=3, normalize=True, val_ratio = 0.1, test_ratio = 0.1)
 
         torch.save(training_data, 'saved_models/training_data.pt')
         torch.save(validation_data, 'saved_models/validation_data.pt')
@@ -151,6 +152,8 @@ if __name__ == '__main__':
         # 打印训练集第一个样本的输入/输出形状便于调试（若训练集为空则显示 None）
         print("Input shape:", training_data[0][0].shape if len(training_data) else None)
         print("Output shape:", training_data[0][1].shape if len(training_data) else None)
-    except Exception:
-        # 捕获并打印任何异常
-        print("Self-test failed")
+        
+    except Exception as e:
+        print(f"Self-test failed: {e}")
+        import traceback
+        traceback.print_exc()   # 打印完整堆栈

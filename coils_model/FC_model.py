@@ -167,13 +167,12 @@ class FullyConnectedNet(nn.Module):
                     t_L_rel_err = t_rel_err[:, 0] # 电感相对误差
                     t_R_rel_err = t_rel_err[:, 1] # 电阻相对误差
                     
-                    # 50轮训练后，相对误差大于3.0的样本被认为是异常值，不计入后续统计
-                    if epoch >= 50:                    
-                        valid_mask = (t_L_rel_err < 3.0) & (t_R_rel_err < 3.0)
-                        t_L_rel_err = t_L_rel_err[valid_mask]
-                        t_R_rel_err = t_R_rel_err[valid_mask]
+                    # # 50轮训练后，相对误差大于3.0的样本被认为是异常值，不计入后续统计
+                    # if epoch >= 50:                    
+                    #     valid_mask = (t_L_rel_err < 3.0) & (t_R_rel_err < 3.0)
+                    #     t_L_rel_err = t_L_rel_err[valid_mask]
+                    #     t_R_rel_err = t_R_rel_err[valid_mask]
                     
-                    # 确保过滤后仍有样本参与统计，避免 max() 函数在空张量上抛出错误
                     tra_L_Max_rel_err = max(tra_L_Max_rel_err, t_L_rel_err.max().item()) if t_L_rel_err.numel() > 0 else 0
                     tra_R_Max_rel_err = max(tra_R_Max_rel_err, t_R_rel_err.max().item()) if t_R_rel_err.numel() > 0 else 0
 
@@ -206,10 +205,10 @@ class FullyConnectedNet(nn.Module):
                     v_L_rel_err = v_rel_err[:, 0]
                     v_R_rel_err = v_rel_err[:, 1]
                     
-                    if epoch >= 50:                    
-                        valid_mask = (v_L_rel_err < 3.0) & (v_R_rel_err < 3.0)
-                        v_L_rel_err = v_L_rel_err[valid_mask]
-                        v_R_rel_err = v_R_rel_err[valid_mask]
+                    # if epoch >= 50:                    
+                    #     valid_mask = (v_L_rel_err < 3.0) & (v_R_rel_err < 3.0)
+                    #     v_L_rel_err = v_L_rel_err[valid_mask]
+                    #     v_R_rel_err = v_R_rel_err[valid_mask]
 
                     val_L_Max_rel_err = max(val_L_Max_rel_err, v_L_rel_err.max().item()) if v_L_rel_err.numel() > 0 else 0
                     val_R_Max_rel_err = max(val_R_Max_rel_err, v_R_rel_err.max().item()) if v_R_rel_err.numel() > 0 else 0
