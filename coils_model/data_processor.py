@@ -31,8 +31,8 @@ def _default_data_path() -> str:
 
 
 def load_data(path: str | None = None,
-                input_cols: int = 5,
-                output_cols: int = 3,
+                input_cols: list[int] = [0,1,2,3,4,7,8],
+                output_cols: list[int] = [10,11],
                 normalize: bool = True,
                 val_ratio: float = 0.1,
                 test_ratio: float = 0.0) -> tuple[TensorDataset, TensorDataset, TensorDataset, dict]:
@@ -40,8 +40,8 @@ def load_data(path: str | None = None,
 
     参数说明：
       - path: xlsx 文件路径，默认使用模块内置数据路径。
-      - input_cols: 输入特征列数(从左侧开始)，默认 5。
-      - output_cols: 输出列数(从右侧开始，且不包含最后一列)，默认 3。
+      - input_cols: 输入特征列。
+      - output_cols: 输出标签值列。
       - normalize: 是否对输入做标准化(均值 0、方差 1)。
       - test_ratio, val_ratio: 测试集与验证集比例(相对于全部数据)。
       - random_seed: 随机种子，便于可复现拆分。
@@ -79,9 +79,17 @@ def load_data(path: str | None = None,
         meta: dict = {'raw_data': data.tolist()} # 创建meta，使用Python基础数据格式保存
         print(f"Loaded {len(parts)} XLSX files, total shape: {data.shape}")
 
+    # 对数据进行清洗
+    # 1. 基于物理规律进行清洗：
+    # 第8列（直流电感）小于第11列（交流电感）的样本不合理，予以剔除（索引从0开始）
+    # 第9列（直流电阻）大于第12列（交流电阻）的样本不合理，予以剔除
+    data = data[data[:, 7] > data[:, 10]]
+    data = data[data[:, 8] < data[:, 11]]
+    print(f"After cleaning, total shape: {data.shape}")
+
     # 将数据类型转换为 float32，以匹配 PyTorch 的默认精度
-    X = data[:, :input_cols].astype(np.float32)
-    Y = data[:, -output_cols:-1].astype(np.float32)
+    X = data[:, input_cols].astype(np.float32)
+    Y = data[:, output_cols].astype(np.float32)
 
     # 对输入特征进行归一化
     if normalize:
@@ -138,7 +146,7 @@ if __name__ == '__main__':
     np.random.seed(33)
     # 作为脚本执行时，进行数据划分并保存，打印出数据集信息
     try:
-        training_data, validation_data, test_data, meta = load_data(input_cols=5, output_cols=3, normalize=True, val_ratio = 0.1, test_ratio = 0.1)
+        training_data, validation_data, test_data, meta = load_data(input_cols=[0,1,2,3,4,7,8], output_cols=[10,11], normalize=True, val_ratio = 0.1, test_ratio = 0.1)
 
         torch.save(training_data, 'saved_models/training_data.pt')
         torch.save(validation_data, 'saved_models/validation_data.pt')
