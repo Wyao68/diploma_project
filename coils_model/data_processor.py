@@ -21,6 +21,16 @@ import numpy as np
 import pandas as pd
 import torch 
 from torch.utils.data import TensorDataset 
+from sklearn.ensemble import IsolationForest
+
+
+def set_random_seed(seed=33):
+    """设置所有随机种子，以确保结果可复现"""
+    np.random.seed(seed)
+
+    return seed
+
+RANDOM_SEED = set_random_seed()
 
 
 def _default_data_path() -> str:
@@ -35,7 +45,7 @@ def load_data(path: str | None = None,
                 output_cols: list[int] = [10,11],
                 normalize: bool = True,
                 val_ratio: float = 0.1,
-                test_ratio: float = 0.0) -> tuple[TensorDataset, TensorDataset, TensorDataset, dict]:
+                test_ratio: float = 0.1) -> tuple[TensorDataset, TensorDataset, TensorDataset, dict]:
     """加载数据并返回 Train/Val/Test: TensorDataset。
 
     参数说明：
@@ -80,13 +90,18 @@ def load_data(path: str | None = None,
         print(f"Loaded {len(parts)} XLSX files, total shape: {data.shape}")
 
     # 对数据进行清洗
-    # 1. 基于物理规律进行清洗：
+    # 1. 使用sklearn基于统计方法进行清洗：剔除输入特征中参数微小变动而标签发生巨大变化的异常样本
+    iso = IsolationForest(contamination=0.08, random_state=RANDOM_SEED) # 预期异常样本占比为8%，用于确定异常值的阈值
+    outliers = iso.fit_predict(data[:, :]) # 基于输入、输出联合特征进行异常检测，返回1表示正常样本，-1表示异常样本
+    data = data[outliers == 1]  
+    
+    # 2. 基于物理规律进行清洗：
     # 第8列（直流电感）小于第11列（交流电感）的样本不合理，予以剔除（索引从0开始）
     # 第9列（直流电阻）大于第12列（交流电阻）的样本不合理，予以剔除
     data = data[data[:, 7] > data[:, 10]]
     data = data[data[:, 8] < data[:, 11]]
     print(f"After cleaning, total shape: {data.shape}")
-
+    
     # 将数据类型转换为 float32，以匹配 PyTorch 的默认精度
     X = data[:, input_cols].astype(np.float32)
     Y = data[:, output_cols].astype(np.float32)
@@ -142,8 +157,6 @@ def load_data(path: str | None = None,
 
 
 if __name__ == '__main__':
-    # 设置随机种子以确保结果可复现
-    np.random.seed(33)
     # 作为脚本执行时，进行数据划分并保存，打印出数据集信息
     try:
         training_data, validation_data, test_data, meta = load_data(input_cols=[0,1,2,3,4,7,8], output_cols=[10,11], normalize=True, val_ratio = 0.1, test_ratio = 0.1)

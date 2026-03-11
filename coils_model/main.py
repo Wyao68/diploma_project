@@ -25,9 +25,10 @@ def set_random_seed(seed=33):
         torch.backends.cudnn.benchmark = False
     return seed
 
+RANDOM_SEED = set_random_seed()
+
 
 if __name__ == "__main__":
-    RANDOM_SEED = set_random_seed()
     # 加载数据
     base = os.path.dirname(os.path.dirname(__file__))
     data_path = os.path.join(base, 'saved_models')
@@ -35,8 +36,8 @@ if __name__ == "__main__":
     training_ds = torch.load(os.path.join(data_path, 'training_data.pt'), weights_only=False)
     test_ds = torch.load(os.path.join(data_path, 'test_data.pt'), weights_only=False)
 
-    net = FC_model.FullyConnectedNet([7, 87, 28, 2], dropout_p=0.00622)
+    net = FC_model.FullyConnectedNet([7, 35, 125, 2], dropout_p=0.00010440696066097659)
     
-    net.running(training_ds, test_ds, epochs=150, batch_size=64, lr = 0.01569, weight_decay = 3.2753e-06)
+    net.running(training_ds, test_ds, epochs=150, batch_size=64, lr = 0.02113248911007365, weight_decay = 0.006991782680444427)
 
     
