@@ -82,7 +82,7 @@ def plot(L_per_sample_errs: np.ndarray, R_per_sample_errs: np.ndarray):
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # 加载模型数据
-    model, meta = load_model(os.path.join(data_path, 'coils_model_state_dict.pt'), [7, 35, 125, 2], dropout_p=0.00010440696066097659, device=device)
+    model, meta = load_model(os.path.join(data_path, 'coils_model_state_dict.pt'), [7, 84, 56, 2], dropout_p=0.005988482463751495, device=device)
     test_ds = load_data()
     
     # 在测试集上评估模型并计算每个样本的相对误差
