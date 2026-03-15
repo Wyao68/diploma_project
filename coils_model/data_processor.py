@@ -95,13 +95,6 @@ def load_data(path: str | None = None,
     outliers = iso.fit_predict(data[:, :]) # 基于输入、输出联合特征进行异常检测，返回1表示正常样本，-1表示异常样本
     data = data[outliers == 1]  
     
-    # 2. 基于物理规律进行清洗：
-    # 第8列（直流电感）小于第11列（交流电感）的样本不合理，予以剔除（索引从0开始）
-    # 第9列（直流电阻）大于第12列（交流电阻）的样本不合理，予以剔除
-    # data = data[data[:, 7] > data[:, 10]]
-    # data = data[data[:, 8] < data[:, 11]]
-    # print(f"After cleaning, total shape: {data.shape}")
-    
     # 将数据类型转换为 float32，以匹配 PyTorch 的默认精度
     X = data[:, input_cols].astype(np.float32)
     Y = data[:, output_cols].astype(np.float32)
