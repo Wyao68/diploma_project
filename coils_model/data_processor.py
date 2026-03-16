@@ -90,7 +90,6 @@ def load_data(path: str | None = None,
         print(f"Loaded {len(parts)} XLSX files, total shape: {data.shape}")
 
     # 对数据进行清洗
-    # 1. 使用sklearn基于统计方法进行清洗：剔除输入特征中参数微小变动而标签发生巨大变化的异常样本
     iso = IsolationForest(contamination=0.08, random_state=RANDOM_SEED) # 预期异常样本占比为8%，用于确定异常值的阈值
     outliers = iso.fit_predict(data[:, :]) # 基于输入、输出联合特征进行异常检测，返回1表示正常样本，-1表示异常样本
     data = data[outliers == 1]  
@@ -152,7 +151,7 @@ def load_data(path: str | None = None,
 if __name__ == '__main__':
     # 作为脚本执行时，进行数据划分并保存，打印出数据集信息
     try:
-        training_data, validation_data, test_data, meta = load_data(input_cols=[0,1,2,3,4,7,8], output_cols=[10,11], normalize=True, val_ratio = 0.1, test_ratio = 0.1)
+        training_data, validation_data, test_data, meta = load_data(input_cols=[0,1,2,3,4,7,8], output_cols=[10,11], normalize=True, val_ratio = 0.15, test_ratio = 0.1)
 
         torch.save(training_data, 'saved_models/training_data.pt')
         torch.save(validation_data, 'saved_models/validation_data.pt')
