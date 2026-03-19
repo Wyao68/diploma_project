@@ -118,7 +118,7 @@ class FullyConnectedNet(nn.Module):
                         mode='min',     
                         factor=0.5,       
                         patience=8, 
-                        threshold=1e-4,
+                        threshold=1e-3,
                         threshold_mode='rel'          
                         )
         

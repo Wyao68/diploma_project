@@ -90,9 +90,14 @@ def load_data(path: str | None = None,
         print(f"Loaded {len(parts)} XLSX files, total shape: {data.shape}")
 
     # 对数据进行清洗
-    iso = IsolationForest(contamination=0.08, random_state=RANDOM_SEED) # 预期异常样本占比为8%，用于确定异常值的阈值
+    # n_estimators - 森林中孤立树的数量
+    # max_samples - 每棵树训练的样本数量/比例 'auto' 取 min(256, n_samples)
+    # contamination	- 数据集中异常值的比例
+    iso = IsolationForest(n_estimators=100, max_samples='auto', contamination=0.08, random_state=RANDOM_SEED)
     outliers = iso.fit_predict(data[:, :]) # 基于输入、输出联合特征进行异常检测，返回1表示正常样本，-1表示异常样本
     data = data[outliers == 1]  
+    
+    print(f"After outlier removal, total shape: {data.shape}")
     
     # 将数据类型转换为 float32，以匹配 PyTorch 的默认精度
     X = data[:, input_cols].astype(np.float32)

@@ -54,7 +54,7 @@ def objective(trial: optuna.trial.Trial, epochs: int = 100, batch_size: int = 64
     
     采样的超参数包括：
     - 隐藏层数量
-    - 每层单独采样神经元数量
+    - 每层神经元数量
     - adamW学习率
     - 权重衰减系数
     - dropout率
@@ -76,12 +76,12 @@ def objective(trial: optuna.trial.Trial, epochs: int = 100, batch_size: int = 64
 
     # 采样超参数
     # 隐藏层数量
-    n_hidden = trial.suggest_int("n_hidden", 2, 4)
+    n_hidden = trial.suggest_int("n_hidden", 2, 5)
     
     # 每层单独采样神经元数量
     hidden_units = []
     for i in range(n_hidden):
-        units = trial.suggest_int(f"n_units_layer{i}", 8, 256, log=True)
+        units = trial.suggest_int(f"n_units_layer{i}", 8, 512, log=True)
         hidden_units.append(units)
 
     # 学习率和权重衰减
@@ -89,7 +89,7 @@ def objective(trial: optuna.trial.Trial, epochs: int = 100, batch_size: int = 64
     weight_decay = trial.suggest_float("weight_decay", 1e-6, 1e-2, log=True)
     
     # 采样 dropout 率
-    dropout_p = trial.suggest_float("dropout_p", 0.0, 0.2)
+    dropout_p = trial.suggest_float("dropout_p", 0.0, 0.5)
 
     # 构建模型并移动到设备（优先 GPU）
     net_dims = build_net_dims(input_dim, output_dim, hidden_units)
@@ -120,10 +120,11 @@ def objective(trial: optuna.trial.Trial, epochs: int = 100, batch_size: int = 64
                 mode='min',     
                 factor=0.5,       
                 patience=8, 
-                threshold=1e-4,
+                threshold=1e-3,
                 threshold_mode='rel')
     
     # 训练循环
+    best_val_loss = float('inf')
     for epoch in range(1, epochs + 1):
         model.train()
         for tx, ty in train_loader:
@@ -144,7 +145,7 @@ def objective(trial: optuna.trial.Trial, epochs: int = 100, batch_size: int = 64
             for vx, vy in val_loader:
                 vx = vx.to(device)
                 vy = vy.to(device)
-                preds = model.model(vx)
+                preds = model.forward(vx)
                 l = criterion(preds, vy)
                 val_loss += l.item() * vx.size(0)
                 n_val += vx.size(0)
@@ -154,12 +155,14 @@ def objective(trial: optuna.trial.Trial, epochs: int = 100, batch_size: int = 64
         scheduler.step(val_loss) 
 
         # 每个epoch结束后向 Optuna 报告中间结果并判断剪枝
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
         trial.report(val_loss, epoch)
         if trial.should_prune():
             raise optuna.exceptions.TrialPruned() # 如果剪枝，抛出异常，并让 Optuna 记录该 trial
 
-    # 返回最终 epoch 的验证损失作为优化目标
-    return float(val_loss)
+    # 返回训练过程中最低的验证损失作为优化目标，以防止最后一个 epoch 的偶然波动影响结果
+    return float(best_val_loss)
 
 
 def run_study(n_trials: int = 100, epochs: int = 100, batch_size: int = 64, training_data_size: int | None = None):
@@ -211,7 +214,7 @@ def run_study(n_trials: int = 100, epochs: int = 100, batch_size: int = 64, trai
 if __name__ == '__main__':  
     parser = argparse.ArgumentParser(description="使用 Optuna 对全连接网络做超参数搜索（最小示例）")
     parser.add_argument("--trials", type=int, default=100, help="Optuna trials 数量")
-    parser.add_argument("--epochs", type=int, default=150, help="每个 trial 的训练 epoch 数")
+    parser.add_argument("--epochs", type=int, default=100, help="每个 trial 的训练 epoch 数")
     parser.add_argument("--batch_size", type=int, default=64, help="训练批大小")
     parser.add_argument("--training_data_size", type=int, default=None, help="用于训练的样本数量(None 表示全部）")
     args = parser.parse_args()
