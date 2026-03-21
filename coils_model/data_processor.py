@@ -93,7 +93,7 @@ def load_data(path: str | None = None,
     # n_estimators - 森林中孤立树的数量
     # max_samples - 每棵树训练的样本数量/比例 'auto' 取 min(256, n_samples)
     # contamination	- 数据集中异常值的比例
-    iso = IsolationForest(n_estimators=100, max_samples='auto', contamination=0.08, random_state=RANDOM_SEED)
+    iso = IsolationForest(n_estimators=100, max_samples='auto', contamination=0.12, random_state=RANDOM_SEED)
     outliers = iso.fit_predict(data[:, :]) # 基于输入、输出联合特征进行异常检测，返回1表示正常样本，-1表示异常样本
     data = data[outliers == 1]  
     
