@@ -104,4 +104,4 @@ if st.button("Predict"):
     st.write(f"**Predicted resistance:** {R_pred:.2f} Ohm")
     st.write(f"**Predicted Q-factor:** {Q:.2f}")
     
-# usage example - streamlit run "C:\Users\86153\Desktop\diploma_project\streamlit\predict.py"
+# usage example - streamlit run "C:\Users\86153\Desktop\diploma_project\package\predict.py"
