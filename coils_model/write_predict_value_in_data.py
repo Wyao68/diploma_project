@@ -43,18 +43,18 @@ def main():
     # ---- 读取 data_contrast.xlsx 并用模型预测，写回预测值 ----
     if os.path.exists(target_path):
         try:
-            df = pd.read_excel(target_path, header=None)
-            df = df.to_numpy()  # 转换为 NumPy 数组以便处理，否则公式单元格会被 pandas 读取为 NaN
+            df = pd.read_excel(target_path, header=None)   # 使用 pandas 读取含有公式单元格的excel时必须在excel中保存公式计算结果，否则公式单元格会被 pandas 读取为 NaN
+            data_vol = df.to_numpy()  
         except Exception as e:
             print('Failed to read Excel file:', e)
             return
-
+        
         x_mean = np.array(meta['x_mean'], dtype=np.float32)
         x_std = np.array(meta['x_std'], dtype=np.float32)
         # 与训练时一致的输入列索引
         input_cols = [0,1,2,3,4,7,8] 
 
-        X_raw = df[1:, input_cols] # 从第2行开始读取输入数据
+        X_raw = data_vol[1:, input_cols] # 从第2行开始读取输入数据
         X_norm = (X_raw - x_mean) / x_std         
         X_t = torch.from_numpy(X_norm.astype(np.float32)).to(device)
 
@@ -91,10 +91,8 @@ def main():
 
     
 if __name__ == "__main__":
-    # for i in range(2,8):
-    #     # 需要写入预测值的 Excel 文件路径
-    #     target_path = os.path.join(base, 'data_contrast', f'N{i}.xlsx')
-    #     main()
+    for i in range(2,8):
+        # 需要写入预测值的 Excel 文件路径
+        target_path = os.path.join(base, 'data_contrast', f'N{i}.xlsx')
+        main()
     
-    target_path = os.path.join(base, 'data_contrast', f'N2.xlsx')
-    main()

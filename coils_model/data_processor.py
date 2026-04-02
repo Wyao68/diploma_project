@@ -86,7 +86,6 @@ def load_data(path: str | None = None,
             raise ValueError(f"XLSX files in directory have inconsistent column counts: {cols}")
         
         data = np.vstack(parts)     # 合成为一个大数组
-        # print(data[:5]) # 输出前5行数据以进行调试
         
         meta: dict = {'raw_data': data.tolist()} # 创建meta，使用Python基础数据格式保存
         print(f"Loaded {len(parts)} XLSX files, total shape: {data.shape}")
