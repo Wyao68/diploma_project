@@ -9,10 +9,9 @@ import FC_model
 
 base = os.path.dirname(os.path.dirname(__file__))
 data_path = os.path.join(base, 'saved_models')
-target_path = os.path.join(base, 'coils_model', 'data', 'N2.xlsx')
 
 
-def load_model(state_path: str, net_dims: list[int], dropout_p: float, device: torch.device) -> tuple[torch.nn.Module, dict]:
+def load_model(state_path: str, net_dims: list[int], dropout_p: float, device: torch.device) -> torch.nn.Module:
     """
     加载模型 
     """
@@ -56,11 +55,12 @@ def main():
         input_cols = [0,1,2,3,4,7,8] 
 
         X_raw = df[1:, input_cols] # 从第2行开始读取输入数据
-        X_norm = (X_raw - x_mean) / x_std       
+        X_norm = (X_raw - x_mean) / x_std         
         X_t = torch.from_numpy(X_norm.astype(np.float32)).to(device)
+
         model.eval()
         with torch.no_grad():
-            preds = model(X_t).cpu().numpy()
+            preds = model.forward(X_t).cpu().numpy()
 
         # 将预测写入 Excel 列 15 和 16，并从第2行开始写入（单元格的索引从1开始）
         start_row = 2  
@@ -91,5 +91,10 @@ def main():
 
     
 if __name__ == "__main__":
-    main()
+    # for i in range(2,8):
+    #     # 需要写入预测值的 Excel 文件路径
+    #     target_path = os.path.join(base, 'data_contrast', f'N{i}.xlsx')
+    #     main()
     
+    target_path = os.path.join(base, 'data_contrast', f'N2.xlsx')
+    main()

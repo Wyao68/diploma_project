@@ -94,14 +94,14 @@ if st.button("Predict"):
 
     # 推理
     with torch.no_grad():
-        y_pred = model(x_tensor)  # shape: (1, 2)
+        y_pred = model.forward(x_tensor)  # shape: (1, 2)
 
     L_pred = y_pred[0, 0].item()
     R_pred = y_pred[0, 1].item()
     Q = L_pred * 1e-6 * 6.78e6 * 2 * np.pi / R_pred
 
-    st.write(f"**Predicted inductance:** {L_pred:.2f} uH")
-    st.write(f"**Predicted resistance:** {R_pred:.2f} Ohm")
-    st.write(f"**Predicted Q-factor:** {Q:.2f}")
+    st.write(f"**Predicted inductance:** {L_pred:.3f} uH")
+    st.write(f"**Predicted resistance:** {R_pred:.3f} Ohm")
+    st.write(f"**Predicted Q-factor:** {Q:.3f}")
     
 # usage example - streamlit run "C:\Users\86153\Desktop\diploma_project\package\predict.py"
