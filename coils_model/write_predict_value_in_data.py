@@ -9,7 +9,7 @@ import FC_model
 
 base = os.path.dirname(os.path.dirname(__file__))
 data_path = os.path.join(base, 'saved_models')
-excel_path = os.path.join(base, 'data_contrast.xlsx')
+target_path = os.path.join(base, 'coils_model', 'data', 'N2.xlsx')
 
 
 def load_model(state_path: str, net_dims: list[int], dropout_p: float, device: torch.device) -> tuple[torch.nn.Module, dict]:
@@ -42,9 +42,9 @@ def main():
     with open(os.path.join(data_path, 'meta.json'), "r") as f: meta = json.load(f)
 
     # ---- 读取 data_contrast.xlsx 并用模型预测，写回预测值 ----
-    if os.path.exists(excel_path):
+    if os.path.exists(target_path):
         try:
-            df = pd.read_excel(excel_path, header=None)
+            df = pd.read_excel(target_path, header=None)
             df = df.to_numpy()  # 转换为 NumPy 数组以便处理，否则公式单元格会被 pandas 读取为 NaN
         except Exception as e:
             print('Failed to read Excel file:', e)
@@ -55,39 +55,39 @@ def main():
         # 与训练时一致的输入列索引
         input_cols = [0,1,2,3,4,7,8] 
 
-        X_raw = df[2:, input_cols]
+        X_raw = df[1:, input_cols] # 从第2行开始读取输入数据
         X_norm = (X_raw - x_mean) / x_std       
         X_t = torch.from_numpy(X_norm.astype(np.float32)).to(device)
         model.eval()
         with torch.no_grad():
             preds = model(X_t).cpu().numpy()
 
-        # 将预测写入 Excel 列 23 和 24，并从第3行开始写入（单元格的索引从1开始）
-        start_row = 3  
+        # 将预测写入 Excel 列 15 和 16，并从第2行开始写入（单元格的索引从1开始）
+        start_row = 2  
         n_rows_pred = preds.shape[0]
 
-        available_rows = df.shape[0] - start_row
+        available_rows = df.shape[0] - (start_row - 1)
         rows_to_write = min(available_rows, n_rows_pred)
 
         try:
-            wb = openpyxl.load_workbook(excel_path)
+            wb = openpyxl.load_workbook(target_path)
             ws = wb.active
 
-            col_L = 23
-            col_R = 24
+            col_L = 15
+            col_R = 16
 
             for i in range(rows_to_write):
                 row_idx = start_row + i
                 ws.cell(row=row_idx, column=col_L, value=float(preds[i, 0]))
                 ws.cell(row=row_idx, column=col_R, value=float(preds[i, 1]))
 
-            wb.save(excel_path)
+            wb.save(target_path)
             print(f'Wrote predictions successfully.')
         except Exception as e:
             print('Failed to write Excel file with openpyxl:', e)
                 
     else:
-        print('data_contrast.xlsx not found at', excel_path)
+        print('data_contrast.xlsx not found at', target_path)
 
     
 if __name__ == "__main__":
