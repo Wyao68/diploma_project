@@ -78,7 +78,7 @@ def load_data(path: str | None = None,
         parts = []
         for fn in xlsx_files:
             part = pd.read_excel(fn, header=0) # 读取Excel文件，fn为文件路径，header=0表示第一行作为列名
-            parts.append(part.values) # 将DataFrame转换为NumPy数组并添加到列表中
+            parts.append(part.to_numpy()) # 将DataFrame转换为NumPy数组并添加到列表中
 
         # 检查每个 XLSX 文件的列数是否一致
         cols = [p.shape[1] for p in parts]

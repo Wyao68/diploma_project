@@ -45,6 +45,7 @@ def main():
     if os.path.exists(excel_path):
         try:
             df = pd.read_excel(excel_path, header=None)
+            df = df.to_numpy()  # 转换为 NumPy 数组以便处理，否则公式单元格会被 pandas 读取为 NaN
         except Exception as e:
             print('Failed to read Excel file:', e)
             return
@@ -52,11 +53,11 @@ def main():
         x_mean = np.array(meta['x_mean'], dtype=np.float32)
         x_std = np.array(meta['x_std'], dtype=np.float32)
         # 与训练时一致的输入列索引
-        input_cols = [0,1,2,3,4,7,8]  
+        input_cols = [0,1,2,3,4,7,8] 
 
-        X_raw = df.iloc[2:, input_cols].to_numpy(dtype=np.float32)
-        X_norm = (X_raw - x_mean) / x_std
-        X_t = torch.from_numpy(X_norm).to(device)
+        X_raw = df[2:, input_cols]
+        X_norm = (X_raw - x_mean) / x_std       
+        X_t = torch.from_numpy(X_norm.astype(np.float32)).to(device)
         model.eval()
         with torch.no_grad():
             preds = model(X_t).cpu().numpy()
@@ -91,3 +92,4 @@ def main():
     
 if __name__ == "__main__":
     main()
+    
