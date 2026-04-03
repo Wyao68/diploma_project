@@ -66,8 +66,13 @@ def main():
         start_row = 2  
         n_rows_pred = preds.shape[0]
 
-        available_rows = df.shape[0] - (start_row - 1)
+        available_rows = data_vol.shape[0] - (start_row - 1)
         rows_to_write = min(available_rows, n_rows_pred)
+
+        # i = 0
+        # print(X_raw[i, :])  # 打印原始输入以供调试
+        # print(X_norm[i, :])  # 打印归一化输入以供调试
+        # print(preds[i, :])  # 打印预测值以供调试
 
         try:
             wb = openpyxl.load_workbook(target_path)
@@ -95,4 +100,7 @@ if __name__ == "__main__":
         # 需要写入预测值的 Excel 文件路径
         target_path = os.path.join(base, 'data_contrast', f'N{i}.xlsx')
         main()
+        
+    # target_path = os.path.join(base, 'data_contrast', 'N2.xlsx')
+    # main()
     

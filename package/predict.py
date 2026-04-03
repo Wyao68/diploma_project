@@ -94,7 +94,7 @@ if st.button("Predict"):
 
     # 推理
     with torch.no_grad():
-        y_pred = model.forward(x_tensor)  # shape: (1, 2)
+        y_pred = model.forward(x_tensor).cpu().numpy()  # shape: (1, 2)
 
     L_pred = y_pred[0, 0].item()
     R_pred = y_pred[0, 1].item()
@@ -104,4 +104,8 @@ if st.button("Predict"):
     st.write(f"**Predicted resistance:** {R_pred:.3f} Ohm")
     st.write(f"**Predicted Q-factor:** {Q:.3f}")
     
+    # print(input_data)
+    # print(input_norm)
+    # print(y_pred)   
+     
 # usage example - streamlit run "C:\Users\86153\Desktop\diploma_project\package\predict.py"
