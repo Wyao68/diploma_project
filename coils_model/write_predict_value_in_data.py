@@ -77,8 +77,8 @@ def main():
             wb = openpyxl.load_workbook(target_path)
             ws = wb.active
 
-            col_L = 24
-            col_R = 25
+            col_L = 20
+            col_R = 21
 
             for i in range(rows_to_write):
                 row_idx = start_row + i
