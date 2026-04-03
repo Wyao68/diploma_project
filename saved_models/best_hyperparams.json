@@ -1,10 +1,10 @@
 {
     "n_hidden": 3,
-    "n_units_layer0": 158,
-    "n_units_layer1": 293,
-    "n_units_layer2": 19,
-    "lr": 0.010798577512012578,
-    "weight_decay": 7.695211586330478e-05,
-    "dropout_p": 0.001720670575377046,
-    "value": 0.006177541373819859
+    "n_units_layer0": 261,
+    "n_units_layer1": 32,
+    "n_units_layer2": 35,
+    "lr": 0.00579453228985926,
+    "weight_decay": 6.195240281615571e-05,
+    "dropout_p": 6.700537683828722e-05,
+    "value": 0.004099093353035863
 }

@@ -30,7 +30,7 @@ def main():
     with open(os.path.join(data_path, 'best_hyperparams.json'), "r") as f:
         hyperparams = json.load(f)
     
-    net_dims = [7]
+    net_dims = [7]  # 输入特征维度，需与训练时一致
     for i in range(hyperparams['n_hidden']):
         net_dims.append(hyperparams[f'n_units_layer{i}'])
     net_dims.append(2)
@@ -54,7 +54,7 @@ def main():
         # 与训练时一致的输入列索引
         input_cols = [0,1,2,3,4,7,8] 
 
-        X_raw = data_vol[1:, input_cols] # 从第2行开始读取输入数据
+        X_raw = data_vol[2:, input_cols] # 从第3行开始读取输入数据，并选择指定的输入列
         X_norm = (X_raw - x_mean) / x_std         
         X_t = torch.from_numpy(X_norm.astype(np.float32)).to(device)
 
@@ -62,24 +62,23 @@ def main():
         with torch.no_grad():
             preds = model.forward(X_t).cpu().numpy()
 
-        # 将预测写入 Excel 列 15 和 16，并从第2行开始写入（单元格的索引从1开始）
-        start_row = 2  
+        # 单元格的索引从1开始
+        start_row = 3  
         n_rows_pred = preds.shape[0]
 
         available_rows = data_vol.shape[0] - (start_row - 1)
         rows_to_write = min(available_rows, n_rows_pred)
 
-        # i = 0
-        # print(X_raw[i, :])  # 打印原始输入以供调试
-        # print(X_norm[i, :])  # 打印归一化输入以供调试
-        # print(preds[i, :])  # 打印预测值以供调试
+        # print(X_raw[0, :])  # 打印原始输入以供调试
+        # print(X_norm[0, :])  # 打印归一化输入以供调试
+        # print(preds[0, :])  # 打印预测值以供调试
 
         try:
             wb = openpyxl.load_workbook(target_path)
             ws = wb.active
 
-            col_L = 15
-            col_R = 16
+            col_L = 24
+            col_R = 25
 
             for i in range(rows_to_write):
                 row_idx = start_row + i
@@ -96,11 +95,11 @@ def main():
 
     
 if __name__ == "__main__":
-    for i in range(2,8):
-        # 需要写入预测值的 Excel 文件路径
-        target_path = os.path.join(base, 'data_contrast', f'N{i}.xlsx')
-        main()
+    # for i in range(2,8):
+    #     # 需要写入预测值的 Excel 文件路径
+    #     target_path = os.path.join(base, 'data_contrast', f'N{i}.xlsx')
+    #     main()
         
-    # target_path = os.path.join(base, 'data_contrast', 'N2.xlsx')
-    # main()
+    target_path = os.path.join(base, 'data_contrast', 'experiment_data.xlsx')
+    main()
     
