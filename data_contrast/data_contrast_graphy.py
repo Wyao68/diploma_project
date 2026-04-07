@@ -97,6 +97,29 @@ def main():
         plt.tight_layout()
         plt.show()
         
+        # ---- 绘制误差方差的条形图 ----
+        fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+        # 电感的误差方差条形图
+        axes[0].bar(['FEM', 'Without Characteristic', 'With Characteristic'], 
+                    [emulation_L_relative_err.var(), without_characteristic_L_relative_err.var(), with_characteristic_L_relative_err.var()], 
+                    color=["#09F015", "#FF0000", "#0A14DA"])
+        axes[0].set_title('Variance of Relative Error for Inductance (L)') 
+        axes[0].set_xlabel('prediction method')
+        axes[0].set_ylabel('Variance')
+        axes[0].legend()
+        
+        # 电阻的误差方差条形图
+        axes[1].bar(['FEM', 'Without Characteristic', 'With Characteristic'], 
+                    [emulation_R_relative_err.var(), without_characteristic_R_relative_err.var(), with_characteristic_R_relative_err.var()], 
+                    color=["#09F015", "#FF0000", "#0A14DA"])
+        axes[1].set_title('Variance of Relative Error for Resistance (R)') 
+        axes[1].set_xlabel('prediction method')
+        axes[1].set_ylabel('Variance')
+        axes[1].legend()
+        
+        plt.tight_layout()
+        plt.show()
+        
 if __name__ == "__main__":       
     main()
     
