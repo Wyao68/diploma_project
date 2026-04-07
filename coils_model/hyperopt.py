@@ -24,7 +24,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from FC_model import FullyConnectedNet
 
-def set_random_seed(seed=33):
+def set_random_seed(seed=42):
     """设置所有随机种子，以确保结果可复现"""
     torch.manual_seed(seed)
     
