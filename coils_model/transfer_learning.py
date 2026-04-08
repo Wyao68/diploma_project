@@ -57,10 +57,14 @@ def transfer_learning(i = 1,
     with torch.no_grad():
         y_pred = model.forward(x_test)
         
-    relative_errors_before = torch.abs((y_pred - y_test) / y_test)
-    avg_rel_error_before = relative_errors_before.mean().item()
-    print(f"Average Relative Error on Test Set Before Transfer Learning: {avg_rel_error_before:.4f}")
-    
+    relative_errors_L_before = torch.abs((y_pred[:, 0] - y_test[:, 0]) / y_test[:, 0])
+    relative_errors_R_before = torch.abs((y_pred[:, 1] - y_test[:, 1]) / y_test[:, 1])
+    avg_rel_error_L_before = relative_errors_L_before.mean().item() * 100
+    avg_rel_error_R_before = relative_errors_R_before.mean().item() * 100
+    print(f"Average Relative Error on Test Set Before Transfer Learning:")
+    print(f"  Inductance: {avg_rel_error_L_before:.4f}%")
+    print(f"  Resistance: {avg_rel_error_R_before:.4f}%")
+
     # 进行迁移学习
     # 冻结所有参数
     for param in model.parameters():
@@ -97,10 +101,14 @@ def transfer_learning(i = 1,
     with torch.no_grad():
         y_pred_after = model.forward(x_test)
 
-    # 计算迁移学习后的平均相对误差
-    relative_errors_after = torch.abs((y_pred_after - y_test) / y_test)
-    avg_rel_error_after = relative_errors_after.mean().item()
-    print(f"Average Relative Error on Test Set After Transfer Learning: {avg_rel_error_after:.4f}")
+    # 分别计算迁移学习后电感和电阻的平均相对误差
+    relative_errors_L_after = torch.abs((y_pred_after[:, 0] - y_test[:, 0]) / y_test[:, 0])
+    relative_errors_R_after = torch.abs((y_pred_after[:, 1] - y_test[:, 1]) / y_test[:, 1])
+    avg_rel_error_L_after = relative_errors_L_after.mean().item() * 100
+    avg_rel_error_R_after = relative_errors_R_after.mean().item() * 100
+    print(f"Average Relative Error on Test Set After Transfer Learning:")
+    print(f"  Inductance: {avg_rel_error_L_after:.4f}%")
+    print(f"  Resistance: {avg_rel_error_R_after:.4f}%")
 
     # 保存微调后的权重
     torch.save(model.state_dict(), out_path)

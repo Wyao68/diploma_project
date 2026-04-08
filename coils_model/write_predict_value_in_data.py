@@ -35,7 +35,8 @@ def main():
         net_dims.append(hyperparams[f'n_units_layer{i}'])
     net_dims.append(2)
     
-    model = load_model(os.path.join(data_path, 'coils_model_state_dict.pt'), net_dims, dropout_p=hyperparams['dropout_p'], device=device)
+    # model = load_model(os.path.join(data_path, 'coils_model_state_dict.pt'), net_dims, dropout_p=hyperparams['dropout_p'], device=device)
+    model = load_model(os.path.join(data_path, 'transfer_model_state_dict.pt'), net_dims, dropout_p=hyperparams['dropout_p'], device=device)
 
     # 读取模型训练时的统计量 meta
     with open(os.path.join(data_path, 'meta.json'), "r") as f: meta = json.load(f)
@@ -77,8 +78,8 @@ def main():
             wb = openpyxl.load_workbook(target_path)
             ws = wb.active
 
-            col_L = 20
-            col_R = 21
+            col_L = 28
+            col_R = 29
 
             for i in range(rows_to_write):
                 row_idx = start_row + i
