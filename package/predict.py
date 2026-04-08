@@ -35,6 +35,11 @@ d_in = d_out - 2 * (n - 1) * (p + w) - 2 * w # mm, 线圈内径
 R_dc = 1.68e-8 * (4 * n * (d_out + d_in) / 2) / (w * h) * 1e3  # Ohm, 直流电阻
 L_dc = 2.34 * 1.257e-6 * (n**2 * (d_out + d_in) / 2) / (1 + 2.73 * (d_out - d_in) / (d_out + d_in)) * 1e3  # uH, 直流电感
 
+# 如果输入参数不合法，提示用户
+if d_in <= 0:
+    st.error("Invalid input parameters: the inner diameter must be positive. Please adjust the size, turns, pitch, or conductor width.")
+    st.stop()
+
 # assemble the input parameters 
 input_data = np.array([n, d, w, angle, p, L_dc, R_dc]).astype(np.float32)
 
@@ -71,7 +76,7 @@ def load_model_and_meta(data_path):
     # 实例化模型并加载权重
     model = FC_model.FullyConnectedNet(net_dims, dropout_p=hyperparams['dropout_p']).to(device)
     model.load_state_dict(torch.load(
-        os.path.join(data_path, 'coils_model_state_dict.pt'),
+        os.path.join(data_path, 'transfer_model_state_dict.pt'),
         map_location=device
     ))
     model.eval()  # 设置为评估模式
