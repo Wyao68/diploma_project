@@ -51,7 +51,7 @@ def transfer_learning(i = 1,
 
     # 计算预训练模型在测试集上的表现，用于后续对比
     x_test, y_test = test_data.tensors
-    x_test, y_test = x_test.to(device), y_test.to(device)
+    x_test, y_test = x_test.float().to(device), y_test.float().to(device)
     
     model.eval()
     with torch.no_grad():
@@ -61,11 +61,23 @@ def transfer_learning(i = 1,
     avg_rel_error_before = relative_errors_before.mean().item()
     print(f"Average Relative Error on Test Set Before Transfer Learning: {avg_rel_error_before:.4f}")
     
-    # 进行迁移学习：冻结预训练模型的前几层，仅微调输出层
+    # 进行迁移学习
+    # 冻结所有参数
     for param in model.parameters():
         param.requires_grad = False
-    for param in model.net[-i].parameters():  
-        param.requires_grad = True
+
+    # 解冻最后一个 Linear 层（输出层）
+    # 从 model.model 中找出i个 nn.Linear 模块
+    last_linear = None
+    cnt = 0
+    for module in reversed(model.model):
+        if isinstance(module, nn.Linear):
+            cnt += 1
+            last_linear = module
+            if cnt == i:
+                break
+        for param in last_linear.parameters():
+            param.requires_grad = True
         
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=transfer_learning_rate, weight_decay=weight_decay) #微调学习率比预训练学习率小1~2个数量级，以避免过度调整预训练权重
@@ -73,7 +85,7 @@ def transfer_learning(i = 1,
     model.train()
     for epoch in range(epochs):
         for batch_x, batch_y in train_loader:
-            batch_x, batch_y = batch_x.to(device), batch_y.to(device)
+            batch_x, batch_y = batch_x.float().to(device), batch_y.float().to(device)
             optimizer.zero_grad()
             outputs = model(batch_x)
             loss = criterion(outputs, batch_y)
