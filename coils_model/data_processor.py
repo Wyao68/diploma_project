@@ -54,7 +54,6 @@ def load_data(path: str | None = None,
       - output_cols: 输出标签值列。
       - normalize: 是否对输入做标准化(均值 0、方差 1)。
       - test_ratio, val_ratio: 测试集与验证集比例(相对于全部数据)。
-      - random_seed: 随机种子，便于可复现拆分。
 
     返回： (train_ds, val_ds, test_ds, meta)
     meta 包含原始数据、标准化统计量等信息的字典，便于后续反归一化或分析。

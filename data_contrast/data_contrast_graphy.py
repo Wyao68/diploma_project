@@ -105,7 +105,7 @@ def main():
                     color=["#09F015", "#FF0000", "#0A14DA"])
         axes[0].set_title('Variance of Relative Error for Inductance (L)') 
         axes[0].set_xlabel('prediction method')
-        axes[0].set_ylabel('Variance')
+        axes[0].set_ylabel('Variance(%)')
         axes[0].legend()
         
         # 电阻的误差方差条形图
@@ -114,7 +114,7 @@ def main():
                     color=["#09F015", "#FF0000", "#0A14DA"])
         axes[1].set_title('Variance of Relative Error for Resistance (R)') 
         axes[1].set_xlabel('prediction method')
-        axes[1].set_ylabel('Variance')
+        axes[1].set_ylabel('Variance(%)')
         axes[1].legend()
         
         plt.tight_layout()
