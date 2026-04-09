@@ -14,6 +14,10 @@ from torch.utils.data import DataLoader, Subset
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
+base = os.path.dirname(os.path.dirname(__file__))
+dict_path = os.path.join(base, "saved_models", "coils_model_state_dict.pt")
+
+
 class FullyConnectedNet(nn.Module):
     def __init__(self, net_dims, dropout_p=0.0):
         super().__init__()
@@ -122,6 +126,10 @@ class FullyConnectedNet(nn.Module):
                         threshold_mode='rel'          
                         )
         
+        # 早停机制参数
+        # best_val_loss = float('inf')
+        # patience = float('inf') # 不启用早停机制
+        # trigger_times = 0
         # 训练与验证循环
         for epoch in range(1, epochs + 1):
             self.train()
@@ -227,6 +235,16 @@ class FullyConnectedNet(nn.Module):
                 val_R_Max_relevant_errs.append(val_R_Max_rel_err)
                 val_L_Avg_relevant_errs.append(val_L_Avg_rel_err)
                 val_R_Avg_relevant_errs.append(val_R_Avg_rel_err)
+                
+            # if val_loss < best_val_loss:
+            #     best_val_loss = val_loss
+            #     trigger_times = 0
+            #     torch.save(self.state_dict(), dict_path) # 保存当前最优模型权重
+            # else:
+            #     trigger_times += 1
+            #     if trigger_times >= patience:
+            #         print("Early stopping!")
+            #         break
 
             # 学习率调度器根据验证集的结果调整学习率
             scheduler.step(val_loss) 
@@ -235,9 +253,8 @@ class FullyConnectedNet(nn.Module):
             print(f"Epoch {epoch:02d} - "
                   f"Training Loss: {tra_loss:.4f}")
 
-        base = os.path.dirname(os.path.dirname(__file__))
-        # 保存模型参数字典
-        torch.save(self.state_dict(), os.path.join(base, "saved_models", "coils_model_state_dict.pt"))
+        # 全部训练过程结束后保存最终模型权重
+        torch.save(self.state_dict(), dict_path)
         
         # 保存训练过程数据以供可视化
         with open(os.path.join(base, "saved_models", "training_progress.json"), "w") as f:

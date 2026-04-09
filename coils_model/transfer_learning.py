@@ -20,6 +20,19 @@ models_path = os.path.join(base, 'saved_models')
 out_path = os.path.join(base, 'saved_models', 'transfer_model_state_dict.pt')
 
 
+def set_random_seed(seed=33):
+    """设置所有随机种子，以确保结果可复现"""
+    torch.manual_seed(seed)
+    
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    return seed
+
+RANDOM_SEED = set_random_seed()
+
+# 迁移学习函数
 def transfer_learning(i = 1, 
                       epochs:int = 100,
                       transfer_learning_rate:float = 1e-5,
@@ -72,21 +85,24 @@ def transfer_learning(i = 1,
 
     # 解冻最后一个 Linear 层（输出层）
     # 从 model.model 中找出i个 nn.Linear 模块
-    last_linear = None
+    last_i_linear = []
     cnt = 0
     for module in reversed(model.model):
         if isinstance(module, nn.Linear):
             cnt += 1
-            last_linear = module
+            last_i_linear.append(module)
             if cnt == i:
                 break
-        for param in last_linear.parameters():
-            param.requires_grad = True
+        for linear in last_i_linear:
+            for param in linear.parameters():
+                param.requires_grad = True
         
     criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=transfer_learning_rate, weight_decay=weight_decay) #微调学习率比预训练学习率小1~2个数量级，以避免过度调整预训练权重
+    optimizer = torch.optim.AdamW(model.parameters(), lr=transfer_learning_rate, weight_decay=weight_decay) #微调学习率比预训练学习率小1~2个数量级，以避免过度调整预训练权重
     train_loader = DataLoader(training_data, batch_size= 8, shuffle=True) # 微调数据量本身较小，且训练轮数较少，因此不使用过大的 batch size 以免过拟合，同时保持一定的随机性
+    
     model.train()
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.5)
     for epoch in range(epochs):
         for batch_x, batch_y in train_loader:
             batch_x, batch_y = batch_x.float().to(device), batch_y.float().to(device)
@@ -95,6 +111,7 @@ def transfer_learning(i = 1,
             loss = criterion(outputs, batch_y)
             loss.backward()
             optimizer.step()
+        # scheduler.step() 
     
     # 计算迁移学习后的模型在测试集上的表现
     model.eval()
@@ -110,8 +127,7 @@ def transfer_learning(i = 1,
     print(f"  Inductance: {avg_rel_error_L_after:.4f}%")
     print(f"  Resistance: {avg_rel_error_R_after:.4f}%")
 
-    # 保存微调后的权重
-    torch.save(model.state_dict(), out_path)
+    # 全部过程结束后打印信息
     print('Saved transfer-learned model to', out_path)
 
 
