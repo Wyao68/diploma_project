@@ -26,14 +26,26 @@ st.write("The copper thickness is fixed at 2 oz (70um).")
 n = st.number_input("Turns", min_value=1, max_value=8, value=3, step=1, help="Number of turns")
 d = st.number_input("Size (mm)", min_value=1.0, max_value=150.0, value=40.0, step=5.0, help="Outer diameter (mm)")
 w = st.number_input("Conductor width (mm)", min_value=0.1, max_value=10.0, value=1.0, step=0.1, help="Conductor width (mm)")
-p = st.number_input("Pitch (mm)", min_value=0.1, max_value=10.0, value=1.0, step=0.1, help="Coil pitch (mm)")
+s = st.number_input("Pitch (mm)", min_value=0.1, max_value=10.0, value=1.0, step=0.1, help="Coil pitch (mm)")
 angle = st.number_input("Fillet angle (degrees)", min_value=0.0, max_value=90.0, value=45.0, step=5.0, help="Fillet angle (degrees)")
 
-h = 0.070  # mm, 铜导线厚度
-d_out = d  # mm, 线圈外径
-d_in = d_out - 2 * (n - 1) * (p + w) - 2 * w # mm, 线圈内径
-R_dc = 1.68e-8 * (4 * n * (d_out + d_in) / 2) / (w * h) * 1e3  # Ohm, 直流电阻
-L_dc = 2.34 * 1.257e-6 * (n**2 * (d_out + d_in) / 2) / (1 + 2.73 * (d_out - d_in) / (d_out + d_in)) * 1e3  # uH, 直流电感
+h = 0.070  # 铜厚 mm
+rho_cu = 1.68e-8  # 电阻率 Ω·m
+mu0 = 4 * np.pi * 1e-7  # H/m
+d_out = d  # 线圈外径 mm
+
+d_in = d_out - 2 * (n - 1) * (w + s) - 2 * w    # 内径 mm
+d_avg = (d_out + d_in) / 2.0    # 平均直径 mm
+rho = (d_out - d_in) / (d_out + d_in)  # 填充比
+
+# 计算直流电感 L_dc (µH)
+L_dc = (2.34 * mu0 * (n**2 * (d_avg) / 2) / (1 + 2.73 * rho)) * 1e3   # µH
+
+length_m = (4 * n * d_avg) * 1e-3   # 导线长 m
+area_m2 = w * h * 1e-6              # 导线横截面积 m²
+
+# 计算直流电阻 R_dc (Ω)
+R_dc = rho_cu * length_m / area_m2   # Ω
 
 # 如果输入参数不合法，提示用户
 if d_in <= 0:
@@ -41,7 +53,7 @@ if d_in <= 0:
     st.stop()
 
 # assemble the input parameters 
-input_data = np.array([n, d, w, angle, p, L_dc, R_dc]).astype(np.float32)
+input_data = np.array([n, d_out, w, angle, s, L_dc, R_dc], dtype=np.float32)
 
 # load the model and meta
 @st.cache_resource
