@@ -105,7 +105,7 @@ def main():
     n_vals = np.arange(2, 9).tolist()
     w_vals = np.arange(0.4, 1.8, 0.01).tolist()
     d_out = 50.0
-    s = 1.0
+    s = 0.4
     angle = 45.0
     
     X_norm, n_grid, w_grid = build_input_grid(n_list=n_vals, d_out=d_out, w_list=w_vals, s=s, angle=angle, mean=x_mean, std=x_std)
