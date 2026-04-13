@@ -13,3 +13,5 @@ if project_root not in sys.path:
 
 # Importing predict runs the Streamlit UI defined there
 from predict import *
+
+# usage example - streamlit run "C:\Users\86153\Desktop\diploma_project\package\app.py"

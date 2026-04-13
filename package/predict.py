@@ -134,8 +134,10 @@ if st.button("optimize", help="Find the optimal combination of turns, conductor 
     s_values = np.arange(0.2, 1.2, 0.01).tolist()  # 导线间距 mm
     angle_values = np.arange(0, 90, 5).tolist()  # 倒圆角半径 degrees
     
+    batch_size = 5000  # 批量推理的大小
     features_opt = []
     combinations = []
+    top_combinations = dict()  # 用于存储每个匝数对应的最佳组合
     
     for n in n_values:
         for w in w_values:
@@ -155,34 +157,39 @@ if st.button("optimize", help="Find the optimal combination of turns, conductor 
                     input_data_opt = np.array([n, d_fixed, w, angle, s, L_dc, R_dc], dtype=np.float32)
                     input_norm_opt = (input_data_opt - np.asarray(x_mean).flatten()) / np.asarray(x_std).flatten() # 确保 mean 和 std 是一维数组，防止广播错误
 
-                    features_opt.append(input_norm_opt)  # 完成所有组合的特征计算后再进行批量推理，避免在循环内频繁调用模型推理导致性能问题
+                    features_opt.append(input_norm_opt)  # 进行批量推理，避免在循环内频繁调用模型推理导致性能问题
                     combinations.append((n, w, s, angle))
-    
-    # 批量推理             
-    with torch.no_grad():
-        x_tensor_opt = torch.from_numpy(np.array(features_opt)).float().to(device)
-        y_pred_opt = model.forward(x_tensor_opt).cpu().numpy()
-    
-    L_pred_opt = y_pred_opt[:, 0] 
-    R_pred_opt = y_pred_opt[:, 1]
-    Q_opt = L_pred_opt * 1e-6 * 6.78e6 * 2 * np.pi / R_pred_opt
                     
-    # 获取Q值最大的3个turns不同的组合
-    top_indices = np.argsort(Q_opt)[::-1] # argsort返回的是升序索引，反转后得到降序索引
-    st.write("**Top 3 combinations for maximum Q-factor:**")
-    turns_seen = set()
-    top_combinations = []
-    cnt = 0
-    for idx in top_indices:
-        n_opt, w_opt, s_opt, angle_opt = combinations[idx]
-        Q_recommended = Q_opt[idx]
-        if n_opt not in turns_seen:
-            cnt += 1
-            if cnt > 3:
-                break
-            turns_seen.add(n_opt)
-            top_combinations.append((n_opt, w_opt, s_opt, angle_opt, Q_recommended))
-    for n_opt, w_opt, s_opt, angle_opt, Q_recommended in top_combinations:
+                    # 每当积累到一定数量的组合时，就进行一次批量推理，计算对应的Q值，并清空特征列表以准备下一批组合
+                    if len(features_opt) >= batch_size:
+                        # 批量推理             
+                        with torch.no_grad():
+                            x_tensor_opt = torch.from_numpy(np.array(features_opt)).float().to(device)
+                            y_pred_opt = model.forward(x_tensor_opt).cpu().numpy() 
+    
+                        L_pred_opt = y_pred_opt[:, 0] 
+                        R_pred_opt = y_pred_opt[:, 1]
+                        Q_opt = L_pred_opt * 1e-6 * 6.78e6 * 2 * np.pi / R_pred_opt
+                        
+                        # 保留该批次Q值最大的组合
+                        top_indices = np.argsort(Q_opt)[-20:][::-1] # 取出每个批次中Q值最大的20个组合的索引
+                        for idx in top_indices:
+                            Q = Q_opt[idx]
+                            n_opt, w_opt, s_opt, angle_opt = combinations[idx]
+                            # 如果当前匝数的组合还未记录，或者当前组合的Q值更高，则更新该匝数对应的最佳组合
+                            if n_opt not in top_combinations:
+                                top_combinations[n_opt] = (n_opt, w_opt, s_opt, angle_opt, Q)
+                            else:
+                                _, _, _, _, Q_current_best = top_combinations[n_opt]
+                                if Q > Q_current_best:
+                                    top_combinations[n_opt] = (n_opt, w_opt, s_opt, angle_opt, Q)
+                                    
+                        # 清空特征和组合列表以准备下一批组合
+                        features_opt.clear()
+                        combinations.clear()
+                    
+    st.write("**Recommended combinations for maximum Q-factor:**")
+    for n_opt, w_opt, s_opt, angle_opt, Q_recommended in top_combinations.values():
         st.write(f"Turns: {n_opt}, Outer diameter: {d_fixed:.2f} mm, Conductor width: {w_opt:.2f} mm, Pitch: {s_opt:.2f} mm, Fillet angle: {angle_opt:.1f} degrees, Q-factor: {Q_recommended:.3f}")
 
 # usage example - streamlit run "C:\Users\86153\Desktop\diploma_project\package\predict.py"
