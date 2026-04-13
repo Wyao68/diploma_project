@@ -3,7 +3,6 @@ import json
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 import FC_model
 
@@ -109,7 +108,7 @@ def main():
     angle = 45.0
     
     X_norm, n_grid, w_grid = build_input_grid(n_list=n_vals, d_out=d_out, w_list=w_vals, s=s, angle=angle, mean=x_mean, std=x_std)
-    X_norm = torch.from_numpy(np.array(X_norm)).float().to(device)
+    X_norm = torch.from_numpy(X_norm).float().to(device)
     
     # print(X_norm.shape) # 打印输入矩阵形状进行调试，应为 (len(n_vals)*len(w_vals), 7) = (8*9, 7) = (72, 7)
     # 进行预测

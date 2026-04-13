@@ -24,7 +24,7 @@ class FullyConnectedNet(nn.Module):
         self.dropout_p = dropout_p
         layers = []
         
-        layers.append(nn.Dropout(p=0.0)) # 输入层前的 dropout 层
+        # layers.append(nn.Dropout(p=0.0)) # 输入层前的 dropout 层
 
         # 构建隐藏层(带激活与 dropout)，输出层不加激活与dropout
         in_dim = net_dims[0]
