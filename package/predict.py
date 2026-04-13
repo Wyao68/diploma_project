@@ -130,8 +130,8 @@ if st.button("optimize", help="Find the optimal combination of turns, conductor 
     # 固定输入的外径d，通过网格搜索的方式寻找最佳的n、w、s、angle组合，使得Q最大，并给出Q值最大的3个组合和对应的Q值。
     d_fixed = d_out
     n_values = range(2, 8)  # 2-7 turns
-    w_values = np.arange(0.1, 1.8, 0.1).tolist()  # 导线宽度 mm
-    s_values = np.arange(0.1, 1.2, 0.1).tolist()  # 导线间距 mm
+    w_values = np.arange(0.2, 1.8, 0.01).tolist()  # 导线宽度 mm
+    s_values = np.arange(0.2, 1.2, 0.01).tolist()  # 导线间距 mm
     angle_values = np.arange(0, 90, 5).tolist()  # 倒圆角半径 degrees
     
     features_opt = []
@@ -167,12 +167,22 @@ if st.button("optimize", help="Find the optimal combination of turns, conductor 
     R_pred_opt = y_pred_opt[:, 1]
     Q_opt = L_pred_opt * 1e-6 * 6.78e6 * 2 * np.pi / R_pred_opt
                     
-    # 获取Q值最大的3个组合
-    top_indices = np.argsort(Q_opt)[-3:][::-1] # argsort返回的是升序索引，取最后三个并反转为降序
+    # 获取Q值最大的3个turns不同的组合
+    top_indices = np.argsort(Q_opt)[::-1] # argsort返回的是升序索引，反转后得到降序索引
     st.write("**Top 3 combinations for maximum Q-factor:**")
+    turns_seen = set()
+    top_combinations = []
+    cnt = 0
     for idx in top_indices:
         n_opt, w_opt, s_opt, angle_opt = combinations[idx]
         Q_recommended = Q_opt[idx]
+        if n_opt not in turns_seen:
+            cnt += 1
+            if cnt > 3:
+                break
+            turns_seen.add(n_opt)
+            top_combinations.append((n_opt, w_opt, s_opt, angle_opt, Q_recommended))
+    for n_opt, w_opt, s_opt, angle_opt, Q_recommended in top_combinations:
         st.write(f"Turns: {n_opt}, Outer diameter: {d_fixed:.2f} mm, Conductor width: {w_opt:.2f} mm, Pitch: {s_opt:.2f} mm, Fillet angle: {angle_opt:.1f} degrees, Q-factor: {Q_recommended:.3f}")
 
 # usage example - streamlit run "C:\Users\86153\Desktop\diploma_project\package\predict.py"
