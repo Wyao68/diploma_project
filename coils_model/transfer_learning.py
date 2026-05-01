@@ -36,12 +36,16 @@ RANDOM_SEED = set_random_seed()
 def transfer_learning(i = 1, 
                       epochs:int = 100,
                       transfer_learning_rate:float = 1e-5,
-                      weight_decay:float = 1e-4):
+                      weight_decay:float = 1e-4)-> tuple[list, list]:
     """进行迁移学习
     参数说明:
         i : 仅微调倒数i层. 
         epochs : 微调训练轮数.
         transfer_learning_rate : 迁移学习率.
+        weight_decay : 权重衰减.
+    返回:
+        relative_errors_L : 迁移学习过程中测试集上电感相对误差变化列表.
+        relative_errors_R : 迁移学习过程中测试集上电阻相对误差变化列表.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
@@ -62,28 +66,20 @@ def transfer_learning(i = 1,
     training_data = torch.load(os.path.join(models_path, 'transfer_training_data.pt'), weights_only=False)
     test_data = torch.load(os.path.join(models_path, 'transfer_test_data.pt'), weights_only=False)
 
-    # 计算预训练模型在测试集上的表现，用于后续对比
+    # 拆分测试数据的输入和标签，并移动到设备上
     x_test, y_test = test_data.tensors
     x_test, y_test = x_test.float().to(device), y_test.float().to(device)
     
-    model.eval()
-    with torch.no_grad():
-        y_pred = model.forward(x_test)
-        
-    relative_errors_L_before = torch.abs((y_pred[:, 0] - y_test[:, 0]) / y_test[:, 0])
-    relative_errors_R_before = torch.abs((y_pred[:, 1] - y_test[:, 1]) / y_test[:, 1])
-    avg_rel_error_L_before = relative_errors_L_before.mean().item() * 100
-    avg_rel_error_R_before = relative_errors_R_before.mean().item() * 100
-    print(f"Average Relative Error on Test Set Before Transfer Learning:")
-    print(f"  Inductance: {avg_rel_error_L_before:.4f}%")
-    print(f"  Resistance: {avg_rel_error_R_before:.4f}%")
+    # 记录迁移学习训练过程中测试集上的相对误差变化，以便后续分析
+    relative_errors_L = []
+    relative_errors_R = []
 
     # 进行迁移学习
     # 冻结所有参数
     for param in model.parameters():
         param.requires_grad = False
 
-    # 解冻最后一个 Linear 层（输出层）
+    # 解冻最后i个 Linear 层（输出层）
     # 从 model.model 中找出i个 nn.Linear 模块
     last_i_linear = []
     cnt = 0
@@ -111,25 +107,42 @@ def transfer_learning(i = 1,
             loss = criterion(outputs, batch_y)
             loss.backward()
             optimizer.step()
-        # scheduler.step() 
+        # scheduler.step() # 迁移学习训练轮数较少，且学习率已经很小，因此不使用学习率调度器以保持稳定的微调过程
+        # 每轮记录一次测试集上的相对误差，以观察迁移学习过程中的性能变化
+        model.eval()
+        with torch.no_grad():
+            y_pred_epoch = model.forward(x_test)
+        relative_errors_L_epoch = torch.abs((y_pred_epoch[:, 0] - y_test[:, 0]) / y_test[:, 0])
+        relative_errors_R_epoch = torch.abs((y_pred_epoch[:, 1] - y_test[:, 1]) / y_test[:, 1])
+        avg_rel_error_L_epoch = relative_errors_L_epoch.mean().item() * 100
+        avg_rel_error_R_epoch = relative_errors_R_epoch.mean().item() * 100
+        relative_errors_L.append(avg_rel_error_L_epoch)
+        relative_errors_R.append(avg_rel_error_R_epoch)
     
-    # 计算迁移学习后的模型在测试集上的表现
-    model.eval()
-    with torch.no_grad():
-        y_pred_after = model.forward(x_test)
-
-    # 分别计算迁移学习后电感和电阻的平均相对误差
-    relative_errors_L_after = torch.abs((y_pred_after[:, 0] - y_test[:, 0]) / y_test[:, 0])
-    relative_errors_R_after = torch.abs((y_pred_after[:, 1] - y_test[:, 1]) / y_test[:, 1])
-    avg_rel_error_L_after = relative_errors_L_after.mean().item() * 100
-    avg_rel_error_R_after = relative_errors_R_after.mean().item() * 100
+    # 输出迁移学习前后后的测试集表现，并与迁移学习前进行对比
+    print(f"Average Relative Error on Test Set Before Transfer Learning:")
+    print(f"  Inductance: {relative_errors_L[0]:.4f}%")
+    print(f"  Resistance: {relative_errors_R[0]:.4f}%")
     print(f"Average Relative Error on Test Set After Transfer Learning:")
-    print(f"  Inductance: {avg_rel_error_L_after:.4f}%")
-    print(f"  Resistance: {avg_rel_error_R_after:.4f}%")
+    print(f"  Inductance: {relative_errors_L[-1]:.4f}%")
+    print(f"  Resistance: {relative_errors_R[-1]:.4f}%")
 
     # 全部过程结束后打印信息
     print('Saved transfer-learned model to', out_path)
+    return relative_errors_L, relative_errors_R
 
 
 if __name__ == '__main__':
-    transfer_learning(i=1, epochs=100, transfer_learning_rate=1e-5, weight_decay=1e-4)
+    epochs = 100
+    relative_errors_L, relative_errors_R = transfer_learning(i=1, epochs=epochs, transfer_learning_rate=1e-5, weight_decay=1e-4)
+    # 绘制迁移学习过程中测试集上的相对误差变化曲线，以观察迁移学习的效果和趋势
+    import matplotlib.pyplot as plt
+    epochs_range = range(1, epochs + 1)
+    plt.figure(figsize=(10, 5))
+    plt.plot(epochs_range, relative_errors_L, label='Inductance Relative Error (%)')
+    plt.plot(epochs_range, relative_errors_R, label='Resistance Relative Error (%)')
+    plt.xlabel('Epoch')
+    plt.ylabel('Relative Error (%)')
+    plt.title('Transfer Learning Performance')
+    plt.legend()
+    plt.show()
